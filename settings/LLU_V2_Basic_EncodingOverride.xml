@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<userOverrides>
+    <override>
+        <path>C:\ProgramData\IARSystems\EmbeddedWorkbench\DownloadedExamples\arm\8.30.1\ST\STM32F4xx\STM32Cube_FW_F4\Projects\STM32F411RE-Nucleo\Examples_LL\LLU_V2_Basic\MPU_V2_Basic\Src\stm32f4xx_it.c</path>
+        <encoding>Win-1251</encoding>
+    </override>
+</userOverrides>

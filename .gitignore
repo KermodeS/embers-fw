@@ -1,0 +1,39 @@
+# IAR build output directories
+**/EWARM/*/Exe/
+**/EWARM/*/Obj/
+**/EWARM/*/List/
+**/EWARM/settings/
+
+# IAR project artifacts
+*.dep
+*.pbd
+*.pbd.browse
+*.pbd.linf
+*.pbw
+*.pbi
+*.pbi.xcl
+*.board
+
+# Compiled output
+*.o
+*.a
+*.out
+*.elf
+*.hex
+*.bin
+*.map
+*.sim
+
+# Old/backup source files
+*_18_March_2023_13-23.c
+main_*.c
+
+# ESP32 build
+softAP_0250/build/
+softAP_0250/sdkconfig.old
+softAP_0250/.settings/
+
+# OS
+*.DS_Store
+*~
+Thumbs.db

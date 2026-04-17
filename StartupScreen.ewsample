@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<exampleInfo>
+  <copyDir>..\..\..\..\Drivers\CMSIS\Device\ST\STM32F4xx\</copyDir>
+  <copyDir>..\..\..\..\Drivers\STM32F4xx_HAL_Driver\</copyDir>
+</exampleInfo>

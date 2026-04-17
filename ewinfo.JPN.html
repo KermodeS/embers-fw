@@ -1,0 +1,629 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd"
+     xml:lang="en">
+  <head>
+    <title>Information Center for ARM</title>
+    <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+    <link type="text/css" rel="stylesheet" media="all" href="file://$TOOLKIT_DIR$/doc/infocenter/style/ewic.css" />
+  </head>
+  <body>
+  <div id="topbanner"></div>
+  <div id="titlebanner_small">
+    <h2>Information Center for ARM</h2>
+  </div>
+  <div class="breadcrumb"><a href="$TOOLKIT_DIR$/doc/infocenter/index.JPN.html">Information Center for ARM</a> | EXAMPLES</div>
+  <div class="mainblock">
+   <h2>Example description</h2>
+
+   <pre>  <!--Insert readme.txt-->
+<span style="font-family: monospace;">
+<h1>TIM Workspace</h1>
+
+=====================================================================================
+<b>TIM_BreakAndDeadtime</b>
+TIM example
+=====================================================================================
+
+<u>Example Description</u>
+
+This example shows how to configure the TIMER to perform the following:
+  â generate three center-aligned PWM and complementary PWM signals
+  â insert a defined dead time value
+  â use the break feature
+  â lock the desired parameters
+This example is based on the STM32F4xx TIM LL API;
+peripheral initialization is done using LL unitary services
+functions for optimization purpose (performance and size).
+
+TIM1CLK is fixed to 100 MHz, the TIM1 Prescaler is set to have
+TIM1 counter clock = 10 MHz.
+
+The TIM1 auto-reload is set to generate PWM signal at 10 KHz:
+
+The Three Duty cycles are computed as the following description:
+The channel 1 duty cycle is set to 50% so channel 1N is set to 50%.
+The channel 2 duty cycle is set to 25% so channel 2N is set to 75%.
+The channel 3 duty cycle is set to 12.5% so channel 3N is set to 87.5%.
+
+A dead time equal to 4 us is inserted between
+the different complementary signals, and the Lock level 1 is selected.
+  - The OCx output signal is the same as the reference signal except for the rising edge,
+    which is delayed relative to the reference rising edge.
+  - The OCxN output signal is the opposite of the reference signal except for the rising
+    edge, which is delayed relative to the reference falling edge
+
+Note that calculated duty cycles apply to the reference signal (OCxREF) from
+which outputs OCx and OCxN are generated. As dead time insertion is enabled the
+duty cycle measured on OCx will be slightly lower.
+
+The break Polarity is used at High level.
+
+The TIM1 waveforms can be displayed using an oscilloscope.
+
+
+<u>Directory contents</u>
+
+  - TIM/TIM_BreakAndDeadtime/Inc/stm32f4xx_it.h          Interrupt handlers header file
+  - TIM/TIM_BreakAndDeadtime/Inc/main.h                  Header for main.c module
+  - TIM/TIM_BreakAndDeadtime/Inc/stm32_assert.h          Template file to include assert_failed function
+  - TIM/TIM_BreakAndDeadtime/Src/stm32f4xx_it.c          Interrupt handlers
+  - TIM/TIM_BreakAndDeadtime/Src/main.c                  Main program
+  - TIM/TIM_BreakAndDeadtime/Src/system_stm32f4xx.c      STM32F4xx system source file
+
+
+<u>Hardware and Software environment</u>
+
+  - This example runs on STM32F411xx devices.
+
+  - This example has been tested with NUCLEO-F411RE board and can be
+    easily tailored to any other supported device and development board.
+
+  - NUCLEO-F411RE Set-up
+    - Connect the TIM1 pins to an oscilloscope to monitor the different waveforms:
+      - TIM1_CH1  PA.08: connected to pin 8 of CN9 connector
+      - TIM1_CH1N PA.07: connected to pin 4 of CN5 connector
+      - TIM1_CH2  PA.09: connected to pin 1 of CN5 connector
+      - TIM1_CH2N PB.00: connected to pin 4 of CN8 connector
+      - TIM1_CH3  PA.10: connected to pin 3 of CN9 connector
+      - TIM1_CH3N PB.01: connected to pin 24 of CN10 connector
+
+    - Connect the TIM1 break to the GND. To generate a break event, switch this
+      pin level from 0V to 3.3V.
+      - TIM1_BKIN  PA.06: connected to pin 5 of CN5 connector
+
+
+<u>How to use it ?</u>
+
+In order to make the program work, you must do the following :
+ - Rebuild all files and load your image into target memory
+ - Run the example
+
+
+=====================================================================================
+<b>TIM_DMA</b>
+TIM example
+=====================================================================================
+
+<u>Example Description</u>
+
+This example provides a description of how to use DMA with TIMER update request
+to transfer Data from memory to TIMER Capture Compare Register 3 (TIMx_CCR3);
+Example using the STM32F4xx TIM LL API,
+peripheral initialization done using LL unitary services functions
+for optimization purpose (performance and size).
+
+The following configuration values are used in this example:
+  - TIM3CLK = SystemClock
+  - Counter repetition = 3
+  - Prescaler = 0
+  - TIM3 counter clock = SystemClock
+  - SystemCoreClock is set to 100 MHz for STM32F4xx Devices.
+
+The objective is to configure TIM3 channel 3 to generate PWM edge aligned
+signal with a frequency equal to 17.57 KHz, and a variable duty cycle that
+is changed by the DMA after a specific number of Update DMA request.
+
+The number of this repetitive requests is defined by the TIM3 Repetition counter,
+each 4 Update Requests, the TIM3 Channel 3 Duty Cycle changes to the next new
+value defined by the aCCValue_Buffer.
+
+The PWM waveform can be displayed using an oscilloscope.
+
+Whenever a DMA transfer fails LED2 flashes with a frequency of 1 Hz.
+
+Note: PWM signal frequency value mentioned above is theoretical (obtained when
+      the system clock frequency is exactly 80 MHz). Since the generated system
+      clock frequency may vary from one board to another observed PWM signal
+      frequency might be slightly different.
+
+
+<u>Directory contents</u>
+
+  - TIM/TIM_DMA/Inc/stm32f4xx_it.h          Interrupt handlers header file
+  - TIM/TIM_DMA/Inc/main.h                  Header for main.c module
+  - TIM/TIM_DMA/Inc/stm32_assert.h          Template file to include assert_failed function
+  - TIM/TIM_DMA/Src/stm32f4xx_it.c          Interrupt handlers
+  - TIM/TIM_DMA/Src/main.c                  Main program
+  - TIM/TIM_DMA/Src/system_stm32f4xx.c      STM32F4xx system source file
+
+
+<u>Hardware and Software environment</u>
+
+  - This example runs on STM32F411xx devices.
+
+  - This example has been tested with NUCLEO-F411RE board and can be
+    easily tailored to any other supported device and development board.
+
+  - NUCLEO-F411RE Set-up
+    - Connect the TIM3 pins to an oscilloscope to monitor the different waveforms:
+      - TIM3_CH3  PB.00: connected to pin 4 of CN8 connector
+
+
+<u>How to use it ?</u>
+
+In order to make the program work, you must do the following :
+ - Rebuild all files and load your image into target memory
+ - Run the example
+
+
+=====================================================================================
+<b>TIM_InputCapture</b>
+TIM example
+=====================================================================================
+
+<u>Example Description</u>
+
+This example shows how to use the TIM peripheral to measure the frequency of
+a periodic signal provided either by an external signal generator or by
+another timer instance;
+Example using the STM32F4xx TIM LL API,
+peripheral initialization done using LL unitary services functions
+for optimization purpose (performance and size).
+
+TIM3_CH1 is configured in input capture mode. The TIM3CLK frequency is set to
+its maximum value (Prescaler is 1) in order to get the best possible resolution.
+So the TIM3 counter clock is SystemCoreClock.
+
+SystemCoreClock is set to 100 MHz for STM32F4xx Devices.
+
+The "uwMeasuredFrequency" variable contains the measured signal frequency.
+It is calculated within the capture/compare 1 interrupt service routine.
+
+The minimum frequency value to measure is TIM3 counter clock / TIMx_CCR1 MAX
+                                              = 100 MHz / 65535
+
+Due to TIM3_IRQHandler processing time (around 3.50us), the maximum
+frequency value to measure is around 500 kHz.
+
+TIM2_CH1 is configured to generate a PWM signal.  User push-button can be used to
+change the frequency of this signal from 2 kHz up to 20 kHz by steps of 2 kHz.
+It is then possible to run this example without a signal generator by connecting
+TIM2_CH1 to TIM3_CH1.
+
+
+<u>Directory contents</u>
+
+  - TIM/TIM_InputCapture/Inc/stm32f4xx_it.h          Interrupt handlers header file
+  - TIM/TIM_InputCapture/Inc/main.h                  Header for main.c module
+  - TIM/TIM_InputCapture/Inc/stm32_assert.h          Template file to include assert_failed function
+  - TIM/TIM_InputCapture/Src/stm32f4xx_it.c          Interrupt handlers
+  - TIM/TIM_InputCapture/Src/main.c                  Main program
+  - TIM/TIM_InputCapture/Src/system_stm32f4xx.c      STM32F4xx system source file
+
+
+<u>Hardware and Software environment</u>
+
+  - This example runs on STM32F411xx devices.
+
+  - This example has been tested with NUCLEO-F411RE board and can be
+    easily tailored to any other supported device and development board.
+
+  - NUCLEO-F411RE Set-up
+    - When no signal generator is used TIM2_CH1 can be connected to TIM3_CH1:
+      - TIM3_CH1  PA.06: connected to pin 5 of CN5 connector
+      - TIM2_CH1  PA.05: connected to pin 6 of CN5 connector
+
+
+<u>How to use it ?</u>
+
+In order to make the program work, you must do the following :
+ - Rebuild all files and load your image into target memory
+ - Run the example
+
+
+=====================================================================================
+<b>TIM_OnePulse</b>
+TIM example
+=====================================================================================
+
+<u>Example Description</u>
+
+This example shows how to configure a timer to generate a positive pulse in
+Output Compare mode with a length of tPULSE and after a delay of tDELAY;
+This example is based on the STM32F4xx TIM LL API; peripheral initialization is done
+using LL unitary services functions for optimization purpose (performance and size).
+
+The pulse is generated on OC1.
+
+This example uses 2 timer instances:
+
+  - TIM3 generates a positive pulse of 50 us after a delay of 50 us. User push-button
+    is used to start TIM3 counter.
+                                              ___
+                                             |   |
+    User push-button ________________________|   |________________________________
+                                                            ___________
+                                                           |           |
+    OC1              ______________________________________|           |________
+    (TIM3_CH1)                                &lt;---50 us---&gt;&lt;---50 us---&gt;
+                                                |            |_ uwMeasuredPulseLength
+                                                |_ uwMeasuredDelay
+
+  TIM3_CH1 delay and pulse length are measured every time a pulse is generated.
+  Both can be observed through the debugger by monitoring the variables uwMeasuredDelay and
+  uwMeasuredPulseLength respectively.
+
+  - TIM2 generates a positive pulse of 3 s after a delay of 2 s. TIM2 counter start
+    is controlled through the slave mode controller. TI2FP2 signals is selected as
+    trigger input meaning that TIM2 counter starts when a rising edge is detected on
+    TI2FP2. The TIM2 output channel is mapped on the pin PA.05 (connected to LED2 on board
+    NUCLEO-F411RE). Thus LED2 status (on/off) mirrors the timer output level (active v.s. inactive).
+                                  ___
+                                 |   |
+    TI2 _________________________|   |_________________________________________
+    (TIM2_CH2)
+                                               ___________________________
+                                              |                           |
+    OC1 ______________________________________|                           |____
+    (TIM2_CH1)                   &lt;-----2s-----&gt;&lt;----------3 s-------------&gt;
+
+Both TIM3 and TIM2 are configured to generate a single pulse (timer counter
+stops automatically at the next update event (UEV).
+
+Connecting TIM3 OC1 to TIM2 TI2 allows to trigger TIM2 counter by pressing
+the User push-button.
+
+
+<u>Directory contents</u>
+
+  - TIM/TIM_OnePulse/Inc/stm32f4xx_it.h          Interrupt handlers header file
+  - TIM/TIM_OnePulse/Inc/main.h                  Header for main.c module
+  - TIM/TIM_OnePulse/Inc/stm32_assert.h          Template file to include assert_failed function
+  - TIM/TIM_OnePulse/Src/stm32f4xx_it.c          Interrupt handlers
+  - TIM/TIM_OnePulse/Src/main.c                  Main program
+  - TIM/TIM_OnePulse/Src/system_stm32f4xx.c      STM32F4xx system source file
+
+
+<u>Hardware and Software environment</u>
+
+  - This example runs on STM32F411xx devices.
+
+  - This example has been tested with NUCLEO-F411RE board and can be
+    easily tailored to any other supported device and development board.
+
+  - NUCLEO-F411RE Set-up:
+      - TIM3_CH1  PA.06: connected to pin 5 of CN5 connector
+      - TIM2_CH1  PA.05: connected to pin 6 of CN5 connector
+      - TIM2_CH2  PA.01: connected to pin 2 of CN8 connector
+
+
+<u>How to use it ?</u>
+
+In order to make the program work, you must do the following :
+ - Rebuild all files and load your image into target memory
+ - Run the example
+
+
+=====================================================================================
+<b>TIM_OutputCompare</b>
+TIM example
+=====================================================================================
+
+<u>Example Description</u>
+
+This example shows how to configure the TIM peripheral to generate an output
+waveform in different output compare modes;
+Example using the STM32F4xx TIM LL API,
+peripheral initialization done using LL unitary services functions
+for optimization purpose (performance and size).
+
+In this example TIM2 input clock (TIM2CLK) frequency is set to APB1 clock (PCLK1),
+since APB1 pre-scaler is equal to 1.
+    TIM2CLK = PCLK1
+    PCLK1 = HCLK
+    =&gt; TIM2CLK = HCLK = SystemCoreClock (100 Mhz)
+
+To set the TIM2 counter clock frequency to 10 KHz, the pre-scaler (PSC) is
+calculated as follows:
+PSC = (TIM2CLK / TIM2 counter clock) - 1
+PSC = (SystemCoreClock /10 KHz) - 1
+
+SystemCoreClock is set to 100 MHz for STM32F4xx Devices.
+
+Auto-reload (ARR) is calculated to get a time base period of 100 ms,
+meaning a time base frequency of 10 Hz.
+ARR = (TIM2 counter clock / time base frequency) - 1
+ARR = (TIM2 counter clock / 10) - 1
+
+The capture/compare register (CCR1) of the output channel is set to half the
+auto-reload value. Therefore the timer output compare delay is 50 ms.
+Generally speaking this delay is calculated as follows:
+CC1_delay = TIM2 counter clock / CCR1
+
+The timer output channel is mapped on the pin PA.05 (connected to LED2 on board
+NUCLEO-F411RE). Thus LED2 status (on/off) mirrors the timer output
+level (active v.s. inactive).
+
+User push-button can be used to change the output compare mode:
+  - When the output channel is configured in output compare toggle:  LED2
+    TOGGLES when the counter (CNT) matches the capture/compare register (CCR1).
+  - When the output channel is configured in output compare active:  LED2 is
+    switched ON when the counter (CNT) matches the capture/compare register
+    (CCR1).
+  - When the output channel is configured in output compare inactive:  LED2 is
+    switched OFF when the counter (CNT) matches the capture/compare register
+    (CCR1).
+
+Initially the output channel is configured in output compare toggle mode.
+
+
+<u>Directory contents</u>
+
+  - TIM/TIM_OutputCompare/Inc/stm32f4xx_it.h          Interrupt handlers header file
+  - TIM/TIM_OutputCompare/Inc/main.h                  Header for main.c module
+  - TIM/TIM_OutputCompare/Inc/stm32_assert.h          Template file to include assert_failed function
+  - TIM/TIM_OutputCompare/Src/stm32f4xx_it.c          Interrupt handlers
+  - TIM/TIM_OutputCompare/Src/main.c                  Main program
+  - TIM/TIM_OutputCompare/Src/system_stm32f4xx.c      STM32F4xx system source file
+
+
+<u>Hardware and Software environment</u>
+
+  - This example runs on STM32F411xx devices.
+
+  - This example has been tested with NUCLEO-F411RE board and can be
+    easily tailored to any other supported device and development board.
+
+
+<u>How to use it ?</u>
+
+In order to make the program work, you must do the following :
+ - Rebuild all files and load your image into target memory
+ - Run the example
+
+
+=====================================================================================
+<b>TIM_PWMOutput</b>
+TIM example
+=====================================================================================
+
+<u>Example Description</u>
+
+This example describes how to use a timer peripheral to generate a
+PWM output signal and update PWM duty cycle;
+Example using the STM32F4xx TIM LL API,
+peripheral initialization done using LL unitary services functions
+for optimization purpose (performance and size).
+
+In this example TIM2 input clock TIM2CLK is set to APB1 clock (PCLK1),
+since APB1 pre-scaler is equal to 1.
+   TIM2CLK = PCLK1
+   PCLK1 = HCLK
+   =&gt; TIM2CLK = SystemCoreClock (100 MHz)
+
+To set the TIM2 counter clock frequency to 10 KHz, the pre-scaler (PSC) is
+calculated as follows:
+PSC = (TIM2CLK / TIM2 counter clock) - 1
+PSC = (SystemCoreClock /10 KHz) - 1
+
+SystemCoreClock is set to 100 MHz for STM32F4xx Devices.
+
+Auto-reload (ARR) is calculated to get a time base period of 10 ms,
+meaning a time base frequency of 100 Hz.
+ARR = (TIM2 counter clock / time base frequency) - 1
+ARR = (TIM2 counter clock / 100) - 1
+
+Initially, the capture/compare register (CCR1) of the output channel is set to
+half the auto-reload value meaning a initial duty cycle of 50%.
+Generally speaking this duty cycle is calculated as follows:
+Duty cycle = (CCR1 / ARR) * 100
+
+The timer output channel is mapped on the pin PA.05 (connected to LED2 on board
+NUCLEO-F411RE). Thus LED2 status (on/off) mirrors the timer output
+level (active v.s. inactive).
+
+User push-button can be used to change the duty cycle from 0% up to 100% by
+steps of 10%. Duty cycle is periodically measured. It can be observed through
+the debugger by watching the variable uwMeasuredDutyCycle.
+
+Initially the output channel is configured in output compare toggle mode.
+Note: The LED2 is not toggling. In fact, if the dutycycle is 0% so the LED2 is OFF. When pushing
+successively the user button, the LED2 is ON and its luminosity rises as the dutycycle value keep
+increasing.
+
+
+<u>Directory contents</u>
+
+  - TIM/TIM_PWMOutput/Inc/stm32f4xx_it.h          Interrupt handlers header file
+  - TIM/TIM_PWMOutput/Inc/main.h                  Header for main.c module
+  - TIM/TIM_PWMOutput/Inc/stm32_assert.h          Template file to include assert_failed function
+  - TIM/TIM_PWMOutput/Src/stm32f4xx_it.c          Interrupt handlers
+  - TIM/TIM_PWMOutput/Src/main.c                  Main program
+  - TIM/TIM_PWMOutput/Src/system_stm32f4xx.c      STM32F4xx system source file
+
+
+<u>Hardware and Software environment</u>
+
+  - This example runs on STM32F411xx devices.
+
+  - This example has been tested with NUCLEO-F411RE board and can be
+    easily tailored to any other supported device and development board.
+
+
+<u>How to use it ?</u>
+
+In order to make the program work, you must do the following :
+ - Rebuild all files and load your image into target memory
+ - Run the example
+
+
+=====================================================================================
+<b>TIM_PWMOutput_Init</b>
+TIM example
+=====================================================================================
+
+<u>Example Description</u>
+
+This example describes how to use a timer peripheral to generate a
+PWM output signal and update PWM duty cycle;
+Example using the STM32F4xx TIM LL API,
+peripheral initialization done using LL initialization function
+to demonstrate LL init usage.
+
+In this example TIM2 input clock TIM2CLK is set to APB1 clock (PCLK1),
+since APB1 pre-scaler is equal to 1.
+   TIM2CLK = PCLK1
+   PCLK1 = HCLK
+   =&gt; TIM2CLK = SystemCoreClock (100 MHz)
+
+To set the TIM2 counter clock frequency to 10 KHz, the pre-scaler (PSC) is
+calculated as follows:
+PSC = (TIM2CLK / TIM2 counter clock) - 1
+PSC = (SystemCoreClock /10 KHz) - 1
+
+SystemCoreClock is set to 100 MHz for STM32F4xx Devices.
+
+Auto-reload (ARR) is calculated to get a time base period of 10 ms,
+meaning a time base frequency of 100 Hz.
+ARR = (TIM2 counter clock / time base frequency) - 1
+ARR = (TIM2 counter clock / 100) - 1
+
+Initially, the capture/compare register (CCR1) of the output channel is set to
+half the auto-reload value meaning a initial duty cycle of 50%.
+Generally speaking this duty cycle is calculated as follows:
+Duty cycle = (CCR1 / ARR) * 100
+
+The timer output channel is mapped on the pin PA.05 (connected to LED2 on board
+NUCLEO-F411RE). Thus LED2 status (on/off) mirrors the timer output
+level (active v.s. inactive).
+
+User push-button can be used to change the duty cycle from 0% up to 100% by
+steps of 10%. Duty cycle is periodically measured. It can be observed through
+the debugger by watching the variable uwMeasuredDutyCycle.
+
+Initially the output channel is configured in output compare toggle mode.
+Note: The LED2 is not toggling. In fact, if the dutycycle is 0% so the LED2 is OFF. When pushing
+successively the user button, the LED2 is ON and its luminosity rises as the dutycycle value keep
+increasing.
+
+
+<u>Directory contents</u>
+
+  - TIM/TIM_PWMOutput_Init/Inc/stm32f4xx_it.h          Interrupt handlers header file
+  - TIM/TIM_PWMOutput_Init/Inc/main.h                  Header for main.c module
+  - TIM/TIM_PWMOutput_Init/Inc/stm32_assert.h          Template file to include assert_failed function
+  - TIM/TIM_PWMOutput_Init/Src/stm32f4xx_it.c          Interrupt handlers
+  - TIM/TIM_PWMOutput_Init/Src/main.c                  Main program
+  - TIM/TIM_PWMOutput_Init/Src/system_stm32f4xx.c      STM32F4xx system source file
+
+
+<u>Hardware and Software environment</u>
+
+  - This example runs on STM32F411xx devices.
+
+  - This example has been tested with NUCLEO-F411RE board and can be
+    easily tailored to any other supported device and development board.
+
+
+<u>How to use it ?</u>
+
+In order to make the program work, you must do the following :
+ - Rebuild all files and load your image into target memory
+ - Run the example
+
+
+=====================================================================================
+<b>TIM_TimeBase</b>
+TIM example
+=====================================================================================
+
+<u>Example Description</u>
+
+This example shows how to configure the TIM peripheral to generate a time base;
+Example using the STM32F4xx TIM LL API,
+peripheral initialization done using LL unitary services functions
+for optimization purpose (performance and size).
+
+    In this example TIM2 input clock (TIM2CLK)  is set to APB1 clock (PCLK1),
+    since APB1 prescaler is equal to 1.
+      TIM2CLK = PCLK1
+      PCLK1 = HCLK
+      =&gt; TIM2CLK = HCLK = SystemCoreClock
+    To get TIM2 counter clock at 10 KHz, the Prescaler is computed as following:
+    Prescaler = (TIM2CLK / TIM2 counter clock) - 1
+    Prescaler = (SystemCoreClock /10 KHz) - 1
+
+To set the TIM2 counter clock frequency to 10 KHz, the pre-scaler (PSC) is calculated as follows:
+PSC = (TIM2CLK / TIM2 counter clock) - 1
+PSC = (SystemCoreClock /10 KHz) - 1
+
+SystemCoreClock is set to 100 MHz for STM32F4xx Devices.
+
+The auto-reload (ARR) is calculated to get a time base period of 100ms,
+meaning that initial time base frequency is 10 Hz.
+ARR = (TIM2 counter clock / time base frequency) - 1
+ARR = (TIM2 counter clock / 10) - 1
+
+Update interrupts are enabled. Within the update interrupt service routine pin PA.05
+(connected to LED2 on board NUCLEO-F411RE) is toggled.
+
+User push-button can be used to modify the time base period from 100 ms
+to 1 s in 100 ms steps. To do so, every time User push-button is pressed, the
+autoreload register (ARR) is updated. In up-counting update event is generated
+at each counter overflow (when the counter reaches the auto-reload value).
+
+Finally the time base frequency is calculated as follows:
+time base frequency = TIM2 counter clock /((PSC + 1)*(ARR + 1)*(RCR + 1))
+
+
+<u>Directory contents</u>
+
+  - TIM/TIM_TimeBase/Inc/stm32f4xx_it.h          Interrupt handlers header file
+  - TIM/TIM_TimeBase/Inc/main.h                  Header for main.c module
+  - TIM/TIM_TimeBase/Inc/stm32_assert.h          Template file to include assert_failed function
+  - TIM/TIM_TimeBase/Src/stm32f4xx_it.c          Interrupt handlers
+  - TIM/TIM_TimeBase/Src/main.c                  Main program
+  - TIM/TIM_TimeBase/Src/system_stm32f4xx.c      STM32F4xx system source file
+
+
+<u>Hardware and Software environment</u>
+
+  - This example runs on STM32F411xx devices.
+
+  - This example has been tested with NUCLEO-F411RE board and can be
+    easily tailored to any other supported device and development board.
+
+
+<u>How to use it ?</u>
+
+In order to make the program work, you must do the following :
+ - Rebuild all files and load your image into target memory
+ - Run the example
+
+
+
+  <br\><b><a href="$CUR_DIR$/../../../../Documentation/STM32CubeF4GettingStarted.pdf">Getting started with STM32CubeF4 Embedded Software for STM32F4xx series</a></b>
+
+  <br\><b><a href="$CUR_DIR$/../../../../Release_Notes.html">Release Notes for STM32CubeF4 Embedded Software</a></b>
+
+  <br\><b><a href="$CUR_DIR$/../Release_Notes.html">Release Notes for STM32F411RE-Nucleo Examples</a></b>
+
+</span>
+  </pre>
+  </div>
+  </body>
+</html>
+
