@@ -1200,67 +1200,43 @@ extern uint8_t u8_ManualChannel;
 void ProcessStrobeMode(void );
 void ProcessStrobeMode(void )
 {
-  static uint32_t u32_WaitCounter=0;
-  static uint32_t u32_WaitFactor = 570;//0.015/(1/38000)=570;
-  
-  //  
-  if( ( u8_Mode_Strob_Status == MODE_STATUS_RUN ) &&( u8_StateMaschine == SM_MODE_STROBOSCOPE ) ) 
+  static uint32_t u32_StrobCounter = 0;
+  static bool     b_StrobOn        = false;
+  //
+  if( ( u8_Mode_Strob_Status == MODE_STATUS_RUN ) &&
+      ( u8_StateMaschine     == SM_MODE_STROBOSCOPE ) )
   {
-    switch (u8_Mode_Strobe_SM)
+    u32_StrobCounter++;
+    //
+    if (u32_StrobCounter >= 6333)
     {
-       case SM_MODE_STROB_ON:
-        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( i16_LightLevelRed_AM   ); else
-        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( i16_LightLevelGreen_AM ); else 
-        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( i16_LightLevelBlue_AM  ); else
-        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( i16_LightLevelUv_AM    ); else       
-        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( i16_LightLevelWhite_AM );         
-        //   
-        u8_Mode_Strobe_SM = SM_MODE_STROB_WAIT_OFF;
-        u32_WaitCounter = 0 ;
-        break;
+      u32_StrobCounter = 0;
+      b_StrobOn = !b_StrobOn;
       //
-    case   SM_MODE_STROB_WAIT_OFF:
-        u32_WaitCounter ++ ;
-        if (u32_WaitCounter > u32_WaitFactor ) 
-        {
-          u8_Mode_Strobe_SM = SM_MODE_STROB_OFF ;
-        }
-         break;      
-          
-      case SM_MODE_STROB_OFF: 
-        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( 0 );  else
-        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( 0 );  else
-        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( 0 );  else
-        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( 0 );  else       
-        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( 0 );    
-        //
-        u8_Mode_Strobe_SM =  SM_MODE_STROB_ALL_DOWN ; 
-        //
-        break;       
-      //
-      case SM_MODE_STROB_ALL_DOWN:
-        SetRedLevel   (0); 
-        SetGreenLevel (0);  
-        SetBlueLevel  (0); 
-        SetUvLevel    (0);  
-        SetWhiteLevel (0); 
-        //
-        u8_Mode_Strobe_SM = SM_MODE_STROB_IDLE;
-        // 
-        break; 
-      //  
-      case SM_MODE_STROB_IDLE:
-             
-       break;   
-      //  
-      default:   
-        u8_Mode_Strobe_SM = SM_MODE_STROB_IDLE; 
-        break;//+++ 
-      //
+      if (b_StrobOn)
+      {
+        if ( u8_ManualChannel == MANUAL_MODE_RED   ) SetRedLevel   ( i16_LightLevelRed_AM   ); else
+        if ( u8_ManualChannel == MANUAL_MODE_GREEN ) SetGreenLevel ( i16_LightLevelGreen_AM ); else
+        if ( u8_ManualChannel == MANUAL_MODE_BLUE  ) SetBlueLevel  ( i16_LightLevelBlue_AM  ); else
+        if ( u8_ManualChannel == MANUAL_MODE_UV    ) SetUvLevel    ( i16_LightLevelUv_AM    ); else
+        if ( u8_ManualChannel == MANUAL_MODE_WHITE ) SetWhiteLevel ( i16_LightLevelWhite_AM );
+      }
+      else
+      {
+        SetRedLevel   (0);
+        SetGreenLevel (0);
+        SetBlueLevel  (0);
+        SetUvLevel    (0);
+        SetWhiteLevel (0);
+      }
     }
-  } 
-}
-
+  }
+  else
+  {
+    u32_StrobCounter = 0;
+    b_StrobOn        = false;
+  }
+} 
 
 // this is a universal 76 kHz (actually - somewhere around 78 kHz) timer for processing IR and serial port
 // It is this option that allows you to clearly catch fronties and their duration
