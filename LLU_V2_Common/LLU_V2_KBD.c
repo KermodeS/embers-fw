@@ -112,11 +112,12 @@ void InitControlButtons(void)
 //
     // Надо вызывать с дискретностью  100 раз в секунду и обрабатывать антидребезг
     // Зарезервировано состояний 
-    // #define LED_7_DEFAULT      0
-    // #define LED_7_KBD_PRESSED  1
-    // #define LED_7_KBD_CLICK    2
-    // #define LED_7_KBD_DBL      3
-    // #define LED_7_KBD_UP       4
+    #define LED_7_DEFAULT      0
+    #define LED_7_KBD_PRESSED  1
+    #define LED_7_KBD_CLICK    2
+    #define LED_7_KBD_DBL      3
+    #define LED_7_KBD_UP       4
+    #define LED_7_KBD_WAIT_FOR_PRESS_OFF 5
     // Двойное нажатие - настраваемое с дисктретностью 0,1-0,3 секунды
   // 
   // Машина состояний кнопки
@@ -203,18 +204,17 @@ void Implement_KBD(void)  // ВНИМАНИЕ - ЭТО Клавиатура на МАКЕТНОЙ ПЛАТЕ
   {
     b_Mode_Click   = false;
     //
-    if (u8_StateMaschine == SM_MODE_MANUAL) 
-      Process_Mode_Stroboscope_Button(); // Активация стробоскопа из ручного 
-    else
-      if ( u8_StateMaschine == SM_MODE_STROBOSCOPE)
-        Process_Mode_Sequential_Button ();  // Активация последовательного из строба
-        else
-          if ( u8_StateMaschine == SM_MODE_SEQUENTIAL)
-            Process_Mode_Rainbow_Button();  // Активация радуги из последовательного
-            else
-              if ( u8_StateMaschine == SM_MODE_RAINBOW)
-                Process_Mode_Manual_Button(); // Активация ручного из радуги
-    //       
+    if (u8_ManualButton == MANUAL_MODE_BUTTON_UNDEF)
+    {
+      if (u8_StateMaschine == SM_MODE_MANUAL)
+        u8_ManualButton = MANUAL_MODE_BUTTON_STROBOSCOPE;
+      else if (u8_StateMaschine == SM_MODE_STROBOSCOPE)
+        u8_ManualButton = MANUAL_MODE_BUTTON_SEQUENTIAL;
+      else if (u8_StateMaschine == SM_MODE_SEQUENTIAL)
+        u8_ManualButton = MANUAL_MODE_BUTTON_RAINBOW;
+      else if (u8_StateMaschine == SM_MODE_RAINBOW)
+        u8_ManualButton = MANUAL_MODE_BUTTON_MANUAL;
+    }
   }
   else //
   if  (b_Prev_Click)
@@ -427,7 +427,7 @@ void Implement_KBD(void)  // ВНИМАНИЕ - ЭТО Клавиатура на МАКЕТНОЙ ПЛАТЕ
   #define KBD_SM_SECOND_DOWN                    4
   #define KBD_SM_SECOND_UP                      5 
 
-__STATIC_INLINE void ProcessButton_Mode(void)
+void ProcessButton_Mode(void)
 {
   //
   static uint32_t u32_KBD_SM_Status  = KBD_SM_IDLE;
@@ -480,12 +480,12 @@ __STATIC_INLINE void ProcessButton_Mode(void)
                                    u32_KBD_SM_Status  = KBD_SM_FIRST_DOWN_WAIT_FOR_RELEASE; // начинаем ждать отпускание
        } 
        if ( i32_UpStateCounter>=KBD_SM_FIRST_DOWN_USC_TIME ) // >50ms
-       { // фиксируем отпускание. 
-         // По умолчание - нажатие было коротким, так как в обработчике длинного нажатия 
-         // выполняется переход в u32_KBD_SM_Status  = KBD_SM_FIRST_DOWN_WAIT_FOR_RELEASE; // начинаем ждать отпускание
-                                  u32_KBD_SM_Status  = KBD_SM_FIRST_UP; // начинаем считать длительность отпускание   
-                                  i32_DownStateCounter = 0;
-       }  
+       { // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. 
+                                 u32_KBD_SM_Status  = KBD_SM_FIRST_UP;
+                                 i32_DownStateCounter = 0;
+                                
+       }
+
     break;
     //
     case KBD_SM_FIRST_UP:
@@ -586,8 +586,7 @@ __STATIC_INLINE void ProcessButton_Mode(void)
   }
 }
 
-
-__STATIC_INLINE void ProcessButton_Up(void)
+void ProcessButton_Up(void)
 {
 
   //
@@ -748,8 +747,7 @@ __STATIC_INLINE void ProcessButton_Up(void)
 }
 
 
-
-__STATIC_INLINE void ProcessButton_Down(void)
+void ProcessButton_Down(void)
 {
 
   //
@@ -911,7 +909,7 @@ __STATIC_INLINE void ProcessButton_Down(void)
 }
 //
 //
-__STATIC_INLINE void ProcessButton_Next(void)
+void ProcessButton_Next(void)
 {
   //
   static uint32_t u32_KBD_SM_Status  = KBD_SM_IDLE;
@@ -1072,7 +1070,7 @@ __STATIC_INLINE void ProcessButton_Next(void)
 
 
 //
-__STATIC_INLINE void ProcessButton_Prev(void)
+void ProcessButton_Prev(void)
 {
   //
   static uint32_t u32_KBD_SM_Status  = KBD_SM_IDLE;

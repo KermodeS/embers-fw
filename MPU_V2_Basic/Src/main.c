@@ -4120,7 +4120,9 @@ void  ProcessIrDA_StateMaschine          ( void                  )
     u8_RxPacketDataLength =    10; // 7
     //          u8_ButtonState[1+1+1+2+2];
     // Handle I2C3 events (Master Transmit then Receive) //
-    Handle_I2C_Master_TransmitReceive(I2C_READ_IRDA); 
+    #ifndef DISABLE_I2C_MASTER
+      Handle_I2C_Master_TransmitReceive(I2C_READ_IRDA);
+    #endif /* DISABLE_I2C_MASTER */ 
     //
     if (u8_PacketCounter != aMasterReceiveBuffer[1])
     {
@@ -4225,14 +4227,16 @@ int main(void)
   //
   // LL_mDelay(200); //LL_mDelay(400);
   //
+#if ENABLE_I2C_IRDA
   // Configure DMA1_Stream5 (DMA IP configuration in transfer memory to peripheral (I2C3)  //
   Configure_DMA();
   //
   // Configure I2C1 (I2C IP configuration in Slave mode and related GPIO initialization) //
   // Configure_I2C_Slave();
-
   // Configure I2C3 (I2C IP configuration in Master mode and related GPIO initialization) //
-  Configure_I2C_Master();
+  #ifndef DISABLE_I2C_MASTER
+    Configure_I2C_Master();
+  #endif /* DISABLE_I2C_MASTER */
   //
   // Enable the I2C1 peripheral (Slave) //
   // Activate_I2C_Slave();
@@ -4246,7 +4250,8 @@ int main(void)
   u8_SlaveAddress       = IRDA_ADDRESS;
   //                    //1 +4+6 = 11   
   // u8_ControlLEDs[ 1 +4+6];  // Первый байт, заголовок, данные
-  Handle_I2C_Master_Transmit(I2C_WRIGHT_LED);
+  // Handle_I2C_Master_Transmit(I2C_WRIGHT_LED); // DISABLED - STM8 not responding
+#endif /* ENABLE_I2C_IRDA */
   //
   // ==================== I2C Конец  кода ============================================== //
   // 
@@ -4431,7 +4436,7 @@ int main(void)
   /* ++++  */
   //  55. MPU_V2 main.c 
   // ВНИМАНИЕ  - ОСНОВНОЙ ФРАГМЕНТ
-  u8_StateMaschine = SM_MODE_TURN_ON ; //SM_MODE_MANUAL  ;   
+  u8_StateMaschine = SM_MODE_TURN_ON ; //SM_MODE_TURN_ON  ;   
   while (true)
   {
     ProcessMainStateMaschine();

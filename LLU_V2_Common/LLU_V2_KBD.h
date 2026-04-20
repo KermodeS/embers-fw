@@ -24,13 +24,12 @@
 void InitControlButtons    ( void );
 void ProcessControlButtons ( void );
 //
-__STATIC_INLINE void ProcessButton_Mode  ( void );
-//
-__STATIC_INLINE void ProcessButton_Up    ( void );
-__STATIC_INLINE void ProcessButton_Down  ( void );
-//
-__STATIC_INLINE void ProcessButton_Next  ( void );
-__STATIC_INLINE void ProcessButton_Prev  ( void );
+void ProcessButton_Mode  ( void );
+void ProcessButton_Up    ( void );
+void ProcessButton_Down  ( void );
+void ProcessButton_Next  ( void );
+void ProcessButton_Prev  ( void );
+
 //
 //
 

@@ -238,9 +238,9 @@ uint32_t _SF  = 50;
 //
 // ??????????? uint8_t u8_SM_MODE_MANUAL_ChangeReason = SM_MODE_MANUAL_UNDEF;
 //
-uint8_t u8_ManualButton = MANUAL_MODE_BUTTON_RED ;      //MANUAL_MODE_BUTTON_UNDEF;
+uint8_t u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF ;      //MANUAL_MODE_BUTTON_UNDEF;
 //
-uint8_t u8_StateMaschine = SM_MODE_POWER_UP;//SM_MODE_STAND_BY;
+uint8_t u8_StateMaschine = SM_MODE_TURN_ON;//SM_MODE_STAND_BY;//SM_MODE_POWER_UP
 //
 uint8_t u8_ManualChannel = MANUAL_MODE_RED; //MANUAL_MODE_UNDEF;
 // В прошивке модуля функцию данной переменной выполняет  u32_ActualChannel

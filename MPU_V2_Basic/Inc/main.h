@@ -38,6 +38,14 @@
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __MAIN_H
 #define __MAIN_H
+#define ENABLE_I2C_IRDA 0
+
+/* =========================================================================
+ * BUILD CONFIGURATION FLAGS
+ * Set DISABLE_I2C_MASTER to skip STM8 co-processor I2C init.
+ * Enable when STM8 is absent or unresponsive (address 0x50).
+ * ========================================================================= */
+#define DISABLE_I2C_MASTER
 
 #include "stdbool.h"
 /* Includes ------------------------------------------------------------------*/
@@ -51,18 +59,19 @@
 #include "stm32f4xx_ll_usart.h"
 #include "stm32f4xx_ll_tim.h"
 //
-// для АЦП
+// For ADC
 #include "stm32f4xx_ll_adc.h"
 #include "stm32f4xx_ll_dma.h"
 //
-// Для ребута
+// For watchdog reset / reboot
 #include "stm32f4xx_ll_wwdg.h"
+#include "stm32f4xx_ll_iwdg.h"    // Independent watchdog (IWDG)
 //
 #if defined(USE_FULL_ASSERT)
 #include "stm32_assert.h"
 #endif /* USE_FULL_ASSERT */
 
-// Это  прошивка для LLU_V2_MPU 
+// This firmware is for LLU_V2_MPU 
 #define UNDEF_DEVICE      0 
 #define LOW_POWER_DEVICE  1
 #define MID_POWER_DEVICE  2
@@ -87,7 +96,7 @@
 #define    UV_LEVEL_MAX_MP (2800 +  UV_OFFSET )
 #define WHITE_LEVEL_MAX_MP (2700 + WHT_OFFSET )
 //
-// Процентный сдвиг при ручном управлении
+// Percentage step for manual control
 #define PRCNT_SHIFT  10
 //
 //
@@ -98,7 +107,7 @@ void UpdateUvLevelFast_MP (uint16_t u16_LightIndex);
 void UpdateBlueLevelFast_MP (uint16_t u16_LightIndex);
 //
 // ---------------------------------------------------- // 
-//void UserButton_Callback(void); // ПЕРЕНЕСТИ В ADC.h
+//void UserButton_Callback(void); // MOVE TO ADC.h
 void AdcDmaTransferComplete_Callback(void);
 void AdcDmaTransferError_Callback(void);
 void AdcGrpRegularSequenceConvComplete_Callback(void);
@@ -113,7 +122,7 @@ void GetADC_Data(void);
 // ---------------------------------------------------- //
 //
 //
-// ==================== I2C_Начало кода ============================================== //
+// ==================== I2C  BEGIN ============================================================ //
 
 #include "stdio.h"
 #include "string.h"
@@ -150,7 +159,7 @@ void GetADC_Data(void);
 void Transfer_Complete_Callback(void);
 void Transfer_Error_Callback(void);
 void Error_Callback(void);
-// ==================== I2C Конец  кода ============================================== //
+// ==================== I2C  END ============================================================== //
 
 
 #endif /* __MAIN_H */

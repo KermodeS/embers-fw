@@ -93,7 +93,7 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
  void Delay_uS   (uint16_t u16_Delay);
 
 // ПЕРВЫЙ ВАРИАНТ. С ПУЛЬТОМ, без платы управления
-/* 
+ 
 // Режимы работы - ручной и автоматический
 // В ручном режиме можно произвольно настраивать цвет и оттенок путем задания интенсивности 
 // по каждому каналу 
@@ -153,6 +153,11 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 //
 #define SM_MODE_STROBOSCOPE                     50
 //
+#define SM_MODE_SEQUENTIAL                     100
+#define SM_MODE_RAINBOW                        150
+#define SM_MODE_SERVICE                         80
+#define SM_MODE_SAVE_REBOOT                      5
+#define SM_MODE_POWER_UP                         0
 
 // В ручном режиме можно управлять одним из пяти каналов
 // Это что-бы определять на что воздействовать при нажатии на Ярче/тускнее и т.п.
@@ -190,9 +195,8 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 #define UPDATE_DELAY_MAX_MS    100
 //
 //
-*/
 // 
-// ВТОРОЙ ВАРИАНТ. С ПЛАТОЙ УПРАВЛЕНИЯ
+/*// ВТОРОЙ ВАРИАНТ. С ПЛАТОЙ УПРАВЛЕНИЯ
 // Включили питание
 #define SM_MODE_POWER_UP  0
 //
@@ -223,6 +227,8 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 #define SM_MODE_MANUAL     50
 // Управление в ручном режиме, через ИК ПУЛЬТ или ПУ
 // изменение состояние в ручном режиме
+*/
+/*
 #define SM_MODE_MANUAL_UNDEF   50
 #define SM_MODE_MANUAL_RED     51
 #define SM_MODE_MANUAL_GREEN   52
@@ -242,7 +248,7 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 // 
 // Радуга 
 #define SM_MODE_RAINBOW     200
-
+*/
 
  
  
@@ -262,24 +268,24 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 //
 // 
 // Стробоскоп  
-#define MANUAL_MODE_BUTTON_STROBOSCOPE   8
+//#define MANUAL_MODE_BUTTON_STROBOSCOPE   8
 // Последовательный
 #define MANUAL_MODE_BUTTON_SEQUENTIAL    9 
 // Радуга
 #define MANUAL_MODE_BUTTON_RAINBOW      10 
 //
 // Ручной
-#define MANUAL_MODE_BUTTON_MANUAL       11 
+#define MANUAL_MODE_BUTTON_MANUAL       12 
 //
 //
 // В ручном режиме можно управлять одним из пяти каналов
 // Это что-бы определять на что воздействовать при нажатии на Ярче/тускнее и т.п.
 //#define MANUAL_MODE_UNDEF 0
-#define MANUAL_MODE_RED   0
-#define MANUAL_MODE_GREEN 1
-#define MANUAL_MODE_BLUE  2
-#define MANUAL_MODE_UV    3
-#define MANUAL_MODE_WHITE 4
+//#define MANUAL_MODE_RED   0
+//#define MANUAL_MODE_GREEN 1
+//#define MANUAL_MODE_BLUE  2
+//#define MANUAL_MODE_UV    3
+//#define MANUAL_MODE_WHITE 4
 // По аналогии с макросами селекции канала управления в ручном режиме,
 // формирую макросы селекции канала в режиме управления яркостью через 
 // команды прямого управления
