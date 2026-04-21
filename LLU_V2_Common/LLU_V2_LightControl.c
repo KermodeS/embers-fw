@@ -1605,6 +1605,23 @@ void ProcessMainStateMaschine(void)
       i8_GlobalDutyIndex    = 0;
       i32_GlobalDutyCounter = 0;
     }
+    if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_UP )
+    {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
+        i16_LightLevelRed_AM   += i16_R_10perc; if (i16_LightLevelRed_AM   > RED_MAX_INDEX)   i16_LightLevelRed_AM   = RED_MAX_INDEX-2;
+        i16_LightLevelGreen_AM += i16_G_10perc; if (i16_LightLevelGreen_AM > GREEN_MAX_INDEX) i16_LightLevelGreen_AM = GREEN_MAX_INDEX-2;
+        i16_LightLevelBlue_AM  += i16_B_10perc; if (i16_LightLevelBlue_AM  > BLUE_MAX_INDEX)  i16_LightLevelBlue_AM  = BLUE_MAX_INDEX-2;
+        i16_LightLevelUv_AM    += i16_U_10perc; if (i16_LightLevelUv_AM    > UV_MAX_INDEX)    i16_LightLevelUv_AM    = UV_MAX_INDEX-2;
+        i16_LightLevelWhite_AM += i16_W_10perc; if (i16_LightLevelWhite_AM > WHITE_MAX_INDEX) i16_LightLevelWhite_AM = WHITE_MAX_INDEX-2;
+    }
+    if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
+    {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
+        i16_LightLevelRed_AM   -= i16_R_10perc; if (i16_LightLevelRed_AM   < 1) i16_LightLevelRed_AM   = 1;
+        i16_LightLevelGreen_AM -= i16_G_10perc; if (i16_LightLevelGreen_AM < 1) i16_LightLevelGreen_AM = 1;
+        i16_LightLevelBlue_AM  -= i16_B_10perc; if (i16_LightLevelBlue_AM  < 1) i16_LightLevelBlue_AM  = 1;
+        i16_LightLevelUv_AM    -= i16_U_10perc; if (i16_LightLevelUv_AM    < 1) i16_LightLevelUv_AM    = 1;
+        i16_LightLevelWhite_AM -= i16_W_10perc; if (i16_LightLevelWhite_AM < 1) i16_LightLevelWhite_AM = 1;
+    }
+    u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF; /* clear any unhandled button */
     Process_Mode_Sequential();
     return;
   } 
@@ -1720,15 +1737,30 @@ void ProcessMainStateMaschine(void)
    // РЕЖИМ 3. ПООЧЕРЕДНОЕ ПЛАВНОЕ.
   else*/
   // РЕЖИМ 4. РАДУГА.
-  if (  u8_StateMaschine ==  SM_MODE_RAINBOW     ) // 200
+  if (  u8_StateMaschine ==  SM_MODE_RAINBOW     )
   {
     if ( b_Restore_AM )
     {
       b_Restore_AM = false ;
-      //
-      SetActualMax (); //RestoreActualMax();
-      //    
+      SetActualMax ();
     }
+    if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_UP )
+    {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
+        i16_LightLevelRed_AM   += i16_R_10perc; if (i16_LightLevelRed_AM   > RED_MAX_INDEX)   i16_LightLevelRed_AM   = RED_MAX_INDEX-2;
+        i16_LightLevelGreen_AM += i16_G_10perc; if (i16_LightLevelGreen_AM > GREEN_MAX_INDEX) i16_LightLevelGreen_AM = GREEN_MAX_INDEX-2;
+        i16_LightLevelBlue_AM  += i16_B_10perc; if (i16_LightLevelBlue_AM  > BLUE_MAX_INDEX)  i16_LightLevelBlue_AM  = BLUE_MAX_INDEX-2;
+        i16_LightLevelUv_AM    += i16_U_10perc; if (i16_LightLevelUv_AM    > UV_MAX_INDEX)    i16_LightLevelUv_AM    = UV_MAX_INDEX-2;
+        i16_LightLevelWhite_AM += i16_W_10perc; if (i16_LightLevelWhite_AM > WHITE_MAX_INDEX) i16_LightLevelWhite_AM = WHITE_MAX_INDEX-2;
+    }
+    if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
+    {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
+        i16_LightLevelRed_AM   -= i16_R_10perc; if (i16_LightLevelRed_AM   < 1) i16_LightLevelRed_AM   = 1;
+        i16_LightLevelGreen_AM -= i16_G_10perc; if (i16_LightLevelGreen_AM < 1) i16_LightLevelGreen_AM = 1;
+        i16_LightLevelBlue_AM  -= i16_B_10perc; if (i16_LightLevelBlue_AM  < 1) i16_LightLevelBlue_AM  = 1;
+        i16_LightLevelUv_AM    -= i16_U_10perc; if (i16_LightLevelUv_AM    < 1) i16_LightLevelUv_AM    = 1;
+        i16_LightLevelWhite_AM -= i16_W_10perc; if (i16_LightLevelWhite_AM < 1) i16_LightLevelWhite_AM = 1;
+    }
+    u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF; /* clear any unhandled button */
   }    
   //
   // ВТОРОЙ ВАРИАНТ, 
