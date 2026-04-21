@@ -4222,6 +4222,19 @@ int main(void)
   //  39. MPU_V2 main.c 
   SystemClock_Config();
   //
+  // --- IWDG Watchdog Init ---
+  // Timeout ~4s: LSI=32kHz, prescaler=/32, reload=999
+  // timeout = (4 * 32 * 999) / 32000 = 3.996s
+  LL_RCC_LSI_Enable();
+  while (LL_RCC_LSI_IsReady() == 0) {}  // wait for LSI (~1ms)
+  IWDG->KR  = 0xCCCC;                   // start IWDG
+  IWDG->KR  = 0x5555;                   // unlock PR and RLR
+  IWDG->PR  = 0x05;                     // prescaler /128
+  IWDG->RLR = 999;                      // reload value
+  while (IWDG->SR & (IWDG_SR_PVU | IWDG_SR_RVU)) {}  // wait for sync
+  IWDG->KR  = 0xAAAA;                   // initial kick
+  // --- End IWDG Init ---
+  //
   // 
   // ==================== I2C_Начало кода ============================================== //
   //
@@ -4439,6 +4452,7 @@ int main(void)
   u8_StateMaschine = SM_MODE_TURN_ON ; //SM_MODE_TURN_ON  ;   
   while (true)
   {
+    IWDG->KR = 0xAAAA;           // kick watchdog
     ProcessMainStateMaschine();
     //
     // ===================================================== //
