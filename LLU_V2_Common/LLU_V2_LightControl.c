@@ -159,6 +159,120 @@ void Delay_uS(uint16_t u16_Delay)
    }
 }
 //
+// =============================================================================
+// PERCEPTUAL GAMMA CORRECTION — Manual mode only (Stage 2)
+// =============================================================================
+// Applied exclusively inside DirectLightCtrl() — the manual brightness path.
+// Animation ISR paths are NOT affected; they continue using the original
+// repeat-factor tables and PWM lookup tables unchanged.
+//
+// Each channel has its own gamma table (101 entries, fixed-point x10000).
+// R/G/B/W use gamma 2.2 (standard perceptual curve for visible LEDs).
+// UV uses gamma 1.8 (more linear lux-vs-current response than visible LEDs).
+//
+// To retune a channel after hardware measurement, replace only its table.
+// Regenerate with: round((i/100)^gamma * 10000) for i in 0..100.
+// No floating point, no math.h, safe to call from any context.
+//
+// gamma=2.2  (RED)
+static const uint16_t u16_GammaTable_RED[101] = {
+        0,     0,     2,     4,     8,    14,    21,    29,    39,    50,
+       63,    78,    94,   112,   132,   154,   177,   203,   230,   259,
+      290,   323,   358,   394,   433,   474,   516,   561,   608,   657,
+      707,   760,   815,   872,   932,   993,  1056,  1122,  1190,  1260,
+     1332,  1406,  1483,  1562,  1643,  1726,  1812,  1899,  1989,  2082,
+     2176,  2273,  2373,  2474,  2578,  2684,  2793,  2904,  3017,  3132,
+     3250,  3371,  3494,  3619,  3746,  3876,  4009,  4143,  4281,  4420,
+     4563,  4707,  4854,  5004,  5156,  5310,  5468,  5627,  5789,  5954,
+     6121,  6290,  6462,  6637,  6814,  6994,  7176,  7361,  7549,  7739,
+     7931,  8126,  8324,  8524,  8727,  8933,  9141,  9352,  9565,  9781,
+    10000,
+};
+// gamma=2.2  (GREEN)
+static const uint16_t u16_GammaTable_GREEN[101] = {
+        0,     0,     2,     4,     8,    14,    21,    29,    39,    50,
+       63,    78,    94,   112,   132,   154,   177,   203,   230,   259,
+      290,   323,   358,   394,   433,   474,   516,   561,   608,   657,
+      707,   760,   815,   872,   932,   993,  1056,  1122,  1190,  1260,
+     1332,  1406,  1483,  1562,  1643,  1726,  1812,  1899,  1989,  2082,
+     2176,  2273,  2373,  2474,  2578,  2684,  2793,  2904,  3017,  3132,
+     3250,  3371,  3494,  3619,  3746,  3876,  4009,  4143,  4281,  4420,
+     4563,  4707,  4854,  5004,  5156,  5310,  5468,  5627,  5789,  5954,
+     6121,  6290,  6462,  6637,  6814,  6994,  7176,  7361,  7549,  7739,
+     7931,  8126,  8324,  8524,  8727,  8933,  9141,  9352,  9565,  9781,
+    10000,
+};
+// gamma=2.2  (BLUE)
+static const uint16_t u16_GammaTable_BLUE[101] = {
+        0,     0,     2,     4,     8,    14,    21,    29,    39,    50,
+       63,    78,    94,   112,   132,   154,   177,   203,   230,   259,
+      290,   323,   358,   394,   433,   474,   516,   561,   608,   657,
+      707,   760,   815,   872,   932,   993,  1056,  1122,  1190,  1260,
+     1332,  1406,  1483,  1562,  1643,  1726,  1812,  1899,  1989,  2082,
+     2176,  2273,  2373,  2474,  2578,  2684,  2793,  2904,  3017,  3132,
+     3250,  3371,  3494,  3619,  3746,  3876,  4009,  4143,  4281,  4420,
+     4563,  4707,  4854,  5004,  5156,  5310,  5468,  5627,  5789,  5954,
+     6121,  6290,  6462,  6637,  6814,  6994,  7176,  7361,  7549,  7739,
+     7931,  8126,  8324,  8524,  8727,  8933,  9141,  9352,  9565,  9781,
+    10000,
+};
+// gamma=1.8  (UV — more linear lux-vs-current response than visible LEDs)
+static const uint16_t u16_GammaTable_UV[101] = {
+        0,     3,     9,    18,    30,    46,    63,    83,   106,   131,
+      158,   188,   220,   254,   290,   329,   369,   412,   457,   503,
+      552,   603,   655,   710,   766,   825,   885,   947,  1011,  1077,
+     1145,  1215,  1286,  1359,  1434,  1511,  1590,  1670,  1752,  1836,
+     1922,  2009,  2098,  2189,  2281,  2376,  2472,  2569,  2668,  2769,
+     2872,  2976,  3082,  3189,  3298,  3409,  3522,  3636,  3751,  3868,
+     3987,  4108,  4230,  4353,  4478,  4605,  4733,  4863,  4995,  5128,
+     5262,  5398,  5536,  5675,  5816,  5958,  6102,  6247,  6394,  6542,
+     6692,  6843,  6996,  7151,  7306,  7464,  7622,  7783,  7945,  8108,
+     8272,  8439,  8606,  8775,  8946,  9118,  9292,  9466,  9643,  9821,
+    10000,
+};
+// gamma=2.2  (WHITE)
+static const uint16_t u16_GammaTable_WHITE[101] = {
+        0,     0,     2,     4,     8,    14,    21,    29,    39,    50,
+       63,    78,    94,   112,   132,   154,   177,   203,   230,   259,
+      290,   323,   358,   394,   433,   474,   516,   561,   608,   657,
+      707,   760,   815,   872,   932,   993,  1056,  1122,  1190,  1260,
+     1332,  1406,  1483,  1562,  1643,  1726,  1812,  1899,  1989,  2082,
+     2176,  2273,  2373,  2474,  2578,  2684,  2793,  2904,  3017,  3132,
+     3250,  3371,  3494,  3619,  3746,  3876,  4009,  4143,  4281,  4420,
+     4563,  4707,  4854,  5004,  5156,  5310,  5468,  5627,  5789,  5954,
+     6121,  6290,  6462,  6637,  6814,  6994,  7176,  7361,  7549,  7739,
+     7931,  8126,  8324,  8524,  8727,  8933,  9141,  9352,  9565,  9781,
+    10000,
+};
+
+// GammaCorrectIndex — converts a linear PWM index to a perceptually uniform one.
+// u16_Index:   raw index in [u16_Offset .. u16_Max-1]
+// u16_Max:     channel table size (e.g. RED_MAX_INDEX)
+// u16_Offset:  dead-zone offset (e.g. RED_OFFSET)
+// pu16_Table:  pointer to the channel's 101-entry gamma table
+// Returns:     gamma-corrected index in the same [u16_Offset .. u16_Max-1] range.
+static uint16_t GammaCorrectIndex(uint16_t u16_Index, uint16_t u16_Max,
+                                   uint16_t u16_Offset, const uint16_t* pu16_Table)
+{
+    uint32_t u32_Range, u32_Pct, u32_Corrected;
+    if (u16_Index <= u16_Offset) return u16_Offset;
+    if (u16_Index >= u16_Max)    return (uint16_t)(u16_Max - 1u);
+    u32_Range = (uint32_t)(u16_Max - u16_Offset);
+    u32_Pct   = ((uint32_t)(u16_Index - u16_Offset) * 100u) / u32_Range;
+    if (u32_Pct > 100u) u32_Pct = 100u;
+    {
+        uint32_t u32_frac = ((uint32_t)(u16_Index - u16_Offset) * 100u) % u32_Range;
+        uint32_t u32_lo   = pu16_Table[u32_Pct];
+        uint32_t u32_hi   = (u32_Pct < 100u) ? pu16_Table[u32_Pct + 1u] : 10000u;
+        u32_Corrected     = u32_lo + ((u32_hi - u32_lo) * u32_frac) / u32_Range;
+    }
+    u32_Corrected = (uint32_t)u16_Offset + (u32_Corrected * u32_Range) / 10000u;
+    if (u32_Corrected >= (uint32_t)u16_Max)   u32_Corrected = (uint32_t)(u16_Max - 1u);
+    if (u32_Corrected < (uint32_t)u16_Offset) u32_Corrected = (uint32_t)u16_Offset;
+    return (uint16_t)u32_Corrected;
+}
+// =============================================================================
+//
 //
 // На данный момент - просто счетчик количества вызовов таймера 76 кГц
 int32_t i32_GlobalDutyCounter   = 0;
@@ -922,12 +1036,12 @@ void  DirectLightCtrl( int32_t i32_Channel, int32_t i32_Perc)
     if (i16_LightLevelRed_AM > u32_LightLevelRed)
     {// Увеличение яркости
       for (                                 ;  u32_LightLevelRed<i16_LightLevelRed_AM; u32_LightLevelRed ++ ) 
-      {      SetRedLevel (u32_LightLevelRed);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+      {      SetRedLevel (GammaCorrectIndex((uint16_t)u32_LightLevelRed, RED_MAX_INDEX, RED_OFFSET, u16_GammaTable_RED));  LL_mDelay(u32_Delay_ms);   }
     }
     else
     {// Уменьшение яркости
       for (                                 ;  u32_LightLevelRed>i16_LightLevelRed_AM; u32_LightLevelRed -- )  
-      {      SetRedLevel (u32_LightLevelRed); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+      {      SetRedLevel (GammaCorrectIndex((uint16_t)u32_LightLevelRed, RED_MAX_INDEX, RED_OFFSET, u16_GammaTable_RED)); LL_mDelay(u32_Delay_ms);   }
     }
   } 
   else
@@ -940,12 +1054,12 @@ void  DirectLightCtrl( int32_t i32_Channel, int32_t i32_Perc)
     if (i16_LightLevelGreen_AM > u32_LightLevelGreen)
     {// Увеличение яркости
       for (                                 ;  u32_LightLevelGreen<i16_LightLevelGreen_AM; u32_LightLevelGreen ++ ) 
-      {      SetGreenLevel (u32_LightLevelGreen);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+      {      SetGreenLevel (GammaCorrectIndex((uint16_t)u32_LightLevelGreen, GREEN_MAX_INDEX, GRN_OFFSET, u16_GammaTable_GREEN));  LL_mDelay(u32_Delay_ms);   }
     }
     else
     {// Уменьшение яркости
       for (                                 ;  u32_LightLevelGreen>i16_LightLevelGreen_AM; u32_LightLevelGreen -- )  
-      {      SetGreenLevel (u32_LightLevelGreen); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+      {      SetGreenLevel (GammaCorrectIndex((uint16_t)u32_LightLevelGreen, GREEN_MAX_INDEX, GRN_OFFSET, u16_GammaTable_GREEN)); LL_mDelay(u32_Delay_ms);   }
     }
   } 
   else
@@ -958,12 +1072,12 @@ void  DirectLightCtrl( int32_t i32_Channel, int32_t i32_Perc)
     if (i16_LightLevelBlue_AM > u32_LightLevelBlue)
     {// Увеличение яркости
       for (                                 ;  u32_LightLevelBlue<i16_LightLevelBlue_AM; u32_LightLevelBlue ++ ) 
-      {      SetBlueLevel (u32_LightLevelBlue);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+      {      SetBlueLevel (GammaCorrectIndex((uint16_t)u32_LightLevelBlue, BLUE_MAX_INDEX, BLU_OFFSET, u16_GammaTable_BLUE));  LL_mDelay(u32_Delay_ms);   }
     }
     else
     {// Уменьшение яркости
       for (                                 ;  u32_LightLevelBlue>i16_LightLevelBlue_AM; u32_LightLevelBlue -- )  
-      {      SetBlueLevel (u32_LightLevelBlue); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+      {      SetBlueLevel (GammaCorrectIndex((uint16_t)u32_LightLevelBlue, BLUE_MAX_INDEX, BLU_OFFSET, u16_GammaTable_BLUE)); LL_mDelay(u32_Delay_ms);   }
     }
   } 
   else
@@ -976,12 +1090,12 @@ void  DirectLightCtrl( int32_t i32_Channel, int32_t i32_Perc)
     if (i16_LightLevelUv_AM > u32_LightLevelUv)
     {// Увеличение яркости
       for (                                 ;  u32_LightLevelUv<i16_LightLevelUv_AM; u32_LightLevelUv ++ ) 
-      {      SetUvLevel (u32_LightLevelUv);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+      {      SetUvLevel (GammaCorrectIndex((uint16_t)u32_LightLevelUv, UV_MAX_INDEX, UV_OFFSET, u16_GammaTable_UV));  LL_mDelay(u32_Delay_ms);   }
     }
     else
     {// Уменьшение яркости
       for (                                 ;  u32_LightLevelUv>i16_LightLevelUv_AM; u32_LightLevelUv -- )  
-      {      SetUvLevel (u32_LightLevelUv); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+      {      SetUvLevel (GammaCorrectIndex((uint16_t)u32_LightLevelUv, UV_MAX_INDEX, UV_OFFSET, u16_GammaTable_UV)); LL_mDelay(u32_Delay_ms);   }
     }
   } 
   else
@@ -994,12 +1108,12 @@ void  DirectLightCtrl( int32_t i32_Channel, int32_t i32_Perc)
     if (i16_LightLevelWhite_AM > u32_LightLevelWhite)
     {// Увеличение яркости
       for (                                 ;  u32_LightLevelWhite<i16_LightLevelWhite_AM; u32_LightLevelWhite ++ ) 
-      {      SetWhiteLevel (u32_LightLevelWhite);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+      {      SetWhiteLevel (GammaCorrectIndex((uint16_t)u32_LightLevelWhite, WHITE_MAX_INDEX, WHT_OFFSET, u16_GammaTable_WHITE));  LL_mDelay(u32_Delay_ms);   }
     }
     else
     {// Уменьшение яркости
       for (                                 ;  u32_LightLevelWhite>i16_LightLevelWhite_AM; u32_LightLevelWhite -- )  
-      {      SetWhiteLevel (u32_LightLevelWhite); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+      {      SetWhiteLevel (GammaCorrectIndex((uint16_t)u32_LightLevelWhite, WHITE_MAX_INDEX, WHT_OFFSET, u16_GammaTable_WHITE)); LL_mDelay(u32_Delay_ms);   }
     }
   } 
     
