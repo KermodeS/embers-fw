@@ -1101,7 +1101,6 @@ void InitRedLightArray_MP_V1(void)
     u16_RedRefference_MP[	131	]	=	553	; // 	8
     u16_RedRefference_MP[	132	]	=	561	; // 	8
     u16_RedRefference_MP[	133	]	=	569	; // 	8
-    u16_RedRefference_MP[	133	]	=	577	; // 	8
     u16_RedRefference_MP[	134	]	=	585	; // 	8
     u16_RedRefference_MP[	135	]	=	593	; // 	8
     u16_RedRefference_MP[	136	]	=	601	; // 	8
@@ -1417,7 +1416,6 @@ void InitGreenLightArray_MP_V1(void)
     u16_GreenRefference_MP[	131	]	=	755	; // 	10
     u16_GreenRefference_MP[	132	]	=	765	; // 	11
     u16_GreenRefference_MP[	133	]	=	776	; // 	11
-    u16_GreenRefference_MP[	133	]	=	787	; // 	11
     u16_GreenRefference_MP[	134	]	=	798	; // 	11
     u16_GreenRefference_MP[	135	]	=	809	; // 	11
     u16_GreenRefference_MP[	136	]	=	820	; // 	11
@@ -1733,7 +1731,6 @@ void InitBlueLightArray_MP_V1(void)
     u16_BlueRefference_MP[	131	]	=	755	; // 	10
     u16_BlueRefference_MP[	132	]	=	765	; // 	11
     u16_BlueRefference_MP[	133	]	=	776	; // 	11
-    u16_BlueRefference_MP[	133	]	=	787	; // 	11
     u16_BlueRefference_MP[	134	]	=	798	; // 	11
     u16_BlueRefference_MP[	135	]	=	809	; // 	11
     u16_BlueRefference_MP[	136	]	=	820	; // 	11
@@ -2048,7 +2045,6 @@ void InitUvLightArray_MP_V1(void)
     u16_UvRefference_MP[	131	]	=	840	; // 	11
     u16_UvRefference_MP[	132	]	=	851	; // 	11
     u16_UvRefference_MP[	133	]	=	862	; // 	11
-    u16_UvRefference_MP[	133	]	=	873	; // 	11
     u16_UvRefference_MP[	134	]	=	884	; // 	12
     u16_UvRefference_MP[	135	]	=	896	; // 	12
     u16_UvRefference_MP[	136	]	=	908	; // 	12
@@ -2364,7 +2360,6 @@ void InitWhiteLightArray_MP_V1(void)
     u16_WhiteRefference_MP[	131	]	=	840	; // 	11
     u16_WhiteRefference_MP[	132	]	=	851	; // 	11
     u16_WhiteRefference_MP[	133	]	=	862	; // 	11
-    u16_WhiteRefference_MP[	133	]	=	873	; // 	11
     u16_WhiteRefference_MP[	134	]	=	884	; // 	12
     u16_WhiteRefference_MP[	135	]	=	896	; // 	12
     u16_WhiteRefference_MP[	136	]	=	908	; // 	12
