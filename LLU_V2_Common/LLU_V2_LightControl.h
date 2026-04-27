@@ -470,4 +470,49 @@ void ProcessWhiteButton   (void);
 #define ESP32_NET_ROLE_UNDEF      4 
 //
 //
+// =============================================================================
+// ANIMATION STATE MACHINE — uwTick-driven fade engine (Stage 3)
+// =============================================================================
+// Replaces ISR-based animation stepping.
+// All animation for Sequential and Rainbow modes is driven from here,
+// called once per main loop iteration.
+//
+// Perceptual brightness scale: 0-1000 (matches inverse gamma table indexing).
+// Raw PWM index range: [offset .. max-1] per channel (existing tables).
+//
+// FadeChannel_t — per-channel fade parameters (runtime-settable).
+// =============================================================================
+
+typedef struct {
+    // --- Parameters (set before starting animation) ---
+    uint32_t u32_FadeDurationMs;  // ms for a full sweep (min→max or max→min)
+    uint16_t u16_BrightnessMax;   // perceptual ceiling, 0-1000
+    uint16_t u16_BrightnessMin;   // perceptual floor, 0-1000
+    // --- Internal state (do not set externally) ---
+    uint32_t u32_LastTickMs;      // uwTick at last update
+    int32_t  i32_PercX10;         // current perceptual level × 10 (0-10000)
+    uint8_t  u8_Dir;              // 1 = fading up, 0 = fading down
+    uint8_t  u8_DitherPhase;      // toggles for temporal dithering
+} FadeChannel_t;
+
+// Five channel fade parameter blocks — accessible from LightControl.c and main.c
+extern FadeChannel_t g_Fade[5]; // 0=Red 1=Green 2=Blue 3=UV 4=White
+
+// Channel index aliases for g_Fade[]
+#define FADE_CH_RED   0
+#define FADE_CH_GREEN 1
+#define FADE_CH_BLUE  2
+#define FADE_CH_UV    3
+#define FADE_CH_WHITE 4
+
+// Animation_Init — call once after channel tables are ready (after InitXxxLightArray_MP_V1)
+void Animation_Init(void);
+
+// Animation_Update — call every main loop iteration.
+// Drives Sequential and Rainbow fades using uwTick.
+// Does nothing when u8_StateMaschine is not SM_MODE_SEQUENTIAL or SM_MODE_RAINBOW.
+void Animation_Update(void);
+
+//
+//
 #endif /* __LLU_V2_LIGHT_CONTROL_H */

@@ -4350,6 +4350,7 @@ int main(void)
           InitBlueLightArray_MP_V1();
           InitUvLightArray_MP_V1();
           InitWhiteLightArray_MP_V1();  
+          Animation_Init();          // Stage 3: init fade engine
           //
           break;
     //
@@ -4454,6 +4455,7 @@ int main(void)
   {
     IWDG->KR = 0xAAAA;           // kick watchdog
     ProcessMainStateMaschine();
+    Animation_Update();              // Stage 3: uwTick-driven animation
     //
     // ===================================================== //
     // ИК приемник
