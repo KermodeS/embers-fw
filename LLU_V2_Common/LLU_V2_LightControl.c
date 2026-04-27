@@ -124,11 +124,11 @@ extern uint8_t u8_LED8_State;// = LED_8_DEFAULT; // Качество синхр�
 //
 //
 // Это индексы таблицы управления. От 0 до 1920, к примеру.
-uint16_t   RED_MAX_INDEX = 0 ;
-uint16_t GREEN_MAX_INDEX = 0 ;
-uint16_t  BLUE_MAX_INDEX = 0 ;
-uint16_t    UV_MAX_INDEX = 0 ;
-uint16_t WHITE_MAX_INDEX = 0 ;
+uint16_t   RED_MAX_INDEX = 0;
+uint16_t GREEN_MAX_INDEX = 0;
+uint16_t  BLUE_MAX_INDEX = 0;
+uint16_t    UV_MAX_INDEX = 0;
+uint16_t WHITE_MAX_INDEX = 0;
 //
 //
 /* Measured duty cycle */
@@ -1492,13 +1492,16 @@ void RestoreActualMax (void)
 void SetActualMax (void);
 void SetActualMax (void)
 {
-  // Восстанавливаем амплитудные значения каждого канала в 100%
-  
-  i32_ActualPerc_AM [_ACTUAL_RED] = 100 ;     
-  i32_ActualPerc_AM [_ACTUAL_GRN] = 100 ; 
-  i32_ActualPerc_AM [_ACTUAL_BLU] = 100 ; 
-  i32_ActualPerc_AM [_ACTUAL_UV ] = 100 ; 
-  i32_ActualPerc_AM [_ACTUAL_WHT] = 100 ; 
+    // Set amplitude values scaled to global brightness level
+  int32_t i32_Perc = (int32_t)u16_GlobalBrightMax / 10; // 0-100
+  if (i32_Perc < 10) i32_Perc = 10; // floor at 10%
+  //
+  i32_ActualPerc_AM [_ACTUAL_RED] = i32_Perc ;     
+  i32_ActualPerc_AM [_ACTUAL_GRN] = i32_Perc ; 
+  i32_ActualPerc_AM [_ACTUAL_BLU] = i32_Perc ; 
+  i32_ActualPerc_AM [_ACTUAL_UV ] = i32_Perc ; 
+  i32_ActualPerc_AM [_ACTUAL_WHT] = (i32_Perc * 40) / 100; // White at 40% of global
+ 
   // 
   RestoreActualMax ();
 }
@@ -1726,6 +1729,7 @@ void ProcessMainStateMaschine(void)
         i16_LightLevelBlue_AM  += i16_B_10perc; if (i16_LightLevelBlue_AM  > BLUE_MAX_INDEX)  i16_LightLevelBlue_AM  = BLUE_MAX_INDEX-2;
         i16_LightLevelUv_AM    += i16_U_10perc; if (i16_LightLevelUv_AM    > UV_MAX_INDEX)    i16_LightLevelUv_AM    = UV_MAX_INDEX-2;
         i16_LightLevelWhite_AM += i16_W_10perc; if (i16_LightLevelWhite_AM > WHITE_MAX_INDEX) i16_LightLevelWhite_AM = WHITE_MAX_INDEX-2;
+        if (u16_GlobalBrightMax <= 950u) u16_GlobalBrightMax += 50u; else u16_GlobalBrightMax = 1000u;
     }
     if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
     {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
@@ -1734,6 +1738,7 @@ void ProcessMainStateMaschine(void)
         i16_LightLevelBlue_AM  -= i16_B_10perc; if (i16_LightLevelBlue_AM  < 1) i16_LightLevelBlue_AM  = 1;
         i16_LightLevelUv_AM    -= i16_U_10perc; if (i16_LightLevelUv_AM    < 1) i16_LightLevelUv_AM    = 1;
         i16_LightLevelWhite_AM -= i16_W_10perc; if (i16_LightLevelWhite_AM < 1) i16_LightLevelWhite_AM = 1;
+        if (u16_GlobalBrightMax > 100u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 100u;
     }
     u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF; /* clear any unhandled button */
     Process_Mode_Sequential();
@@ -1795,6 +1800,7 @@ void ProcessMainStateMaschine(void)
       //
       if (u8_ManualChannel == MANUAL_MODE_WHITE)
       {  i16_LightLevelWhite_AM+=i16_W_10perc; if (i16_LightLevelWhite_AM>WHITE_MAX_INDEX)  i16_LightLevelWhite_AM=WHITE_MAX_INDEX-2; }
+      if (u16_GlobalBrightMax <= 950u) u16_GlobalBrightMax += 50u; else u16_GlobalBrightMax = 1000u;
     }
     // Уменьшение яркости строба
     if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
@@ -1809,6 +1815,7 @@ void ProcessMainStateMaschine(void)
       i16_LightLevelUv_AM-=i16_U_10perc;      if (i16_LightLevelUv_AM<(int16_t)1)        i16_LightLevelUv_AM=1;
       //
       i16_LightLevelWhite_AM-=i16_W_10perc;   if (i16_LightLevelWhite_AM<(int16_t)1)     i16_LightLevelWhite_AM=1;
+      if (u16_GlobalBrightMax > 100u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 100u;
       // 
     }
     //   
@@ -1865,6 +1872,7 @@ void ProcessMainStateMaschine(void)
         i16_LightLevelBlue_AM  += i16_B_10perc; if (i16_LightLevelBlue_AM  > BLUE_MAX_INDEX)  i16_LightLevelBlue_AM  = BLUE_MAX_INDEX-2;
         i16_LightLevelUv_AM    += i16_U_10perc; if (i16_LightLevelUv_AM    > UV_MAX_INDEX)    i16_LightLevelUv_AM    = UV_MAX_INDEX-2;
         i16_LightLevelWhite_AM += i16_W_10perc; if (i16_LightLevelWhite_AM > WHITE_MAX_INDEX) i16_LightLevelWhite_AM = WHITE_MAX_INDEX-2;
+        if (u16_GlobalBrightMax <= 950u) u16_GlobalBrightMax += 50u; else u16_GlobalBrightMax = 1000u;
     }
     if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
     {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
@@ -1873,6 +1881,7 @@ void ProcessMainStateMaschine(void)
         i16_LightLevelBlue_AM  -= i16_B_10perc; if (i16_LightLevelBlue_AM  < 1) i16_LightLevelBlue_AM  = 1;
         i16_LightLevelUv_AM    -= i16_U_10perc; if (i16_LightLevelUv_AM    < 1) i16_LightLevelUv_AM    = 1;
         i16_LightLevelWhite_AM -= i16_W_10perc; if (i16_LightLevelWhite_AM < 1) i16_LightLevelWhite_AM = 1;
+        if (u16_GlobalBrightMax > 100u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 100u;
     }
     u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF; /* clear any unhandled button */
   }    
@@ -2948,6 +2957,7 @@ static const uint16_t u16_InvGamma_UV[1001] = {
 //
 // g_Fade[5] — per-channel fade parameter blocks (0=R 1=G 2=B 3=UV 4=W)
 FadeChannel_t g_Fade[5];
+uint16_t u16_GlobalBrightMax = 1000u;  // 0-1000, global animation brightness ceiling
 
 // Default animation parameters
 #define ANIM_DEFAULT_DURATION_MS  4000u
@@ -2955,11 +2965,6 @@ FadeChannel_t g_Fade[5];
 
 //
 // Externs needed by the animation engine
-extern uint16_t  RED_MAX_INDEX;
-extern uint16_t GREEN_MAX_INDEX;
-extern uint16_t  BLUE_MAX_INDEX;
-extern uint16_t    UV_MAX_INDEX;
-extern uint16_t WHITE_MAX_INDEX;
 //
 extern uint32_t u32_ST_captureActual;
 //
@@ -3035,6 +3040,15 @@ static void OutputChannel(uint8_t u8_Ch, uint16_t u16_Perc, uint8_t u8_Frac10)
     }
     g_Fade[u8_Ch].u8_DitherPhase++;
 
+    // Apply global brightness as linear raw output scale for perceptually even steps
+    if (u16_Out > 0u) {
+        uint32_t u32_Scale = (u8_Ch == FADE_CH_WHITE)
+                             ? (uint32_t)u16_GlobalBrightMax * 40u / 100u
+                             : (uint32_t)u16_GlobalBrightMax;
+        u16_Out = (uint16_t)((uint32_t)u16_Out * u32_Scale / 1000u);
+        if (u16_Out < 20u) u16_Out = 0u;
+    }
+
     switch (u8_Ch) {
         case FADE_CH_RED:   UpdateRedLevelFast_MP  (u16_Out); break;
         case FADE_CH_GREEN: UpdateGreenLevelFast_MP(u16_Out); break;
@@ -3089,6 +3103,11 @@ static uint8_t StepChannel(uint8_t u8_Ch, uint32_t u32_NowMs)
     p->u32_LastTickMs = u32_NowMs;
 
     if (p->u32_FadeDurationMs == 0u) p->u32_FadeDurationMs = ANIM_DEFAULT_DURATION_MS;
+   // If BrightnessMax was reduced below current level, clamp and reverse
+    if (p->i32_PercX10 > i32_MaxX10) {
+        p->i32_PercX10 = i32_MaxX10;
+        p->u8_Dir = 0u;
+    }
     // Step = (full range 10000 percX10 units) * elapsed_ms / duration_ms
     i32_Step = (int32_t)((10000u * u32_Elapsed) / p->u32_FadeDurationMs);
     if (i32_Step < 1) i32_Step = 1;
@@ -3159,23 +3178,15 @@ void Animation_Update(void)
 
     // Sync brightness ceiling from manual AM variables (raw index -> 0-1000 perceptual)
     // This makes the UP/DOWN buttons control animation brightness ceiling.
-    if (RED_MAX_INDEX > RED_OFFSET)
-        g_Fade[FADE_CH_RED  ].u16_BrightnessMax =
-            (uint16_t)((uint32_t)(i16_LightLevelRed_AM   - RED_OFFSET) * 1000u / (RED_MAX_INDEX   - RED_OFFSET));
-    if (GREEN_MAX_INDEX > GRN_OFFSET)
-        g_Fade[FADE_CH_GREEN].u16_BrightnessMax =
-            (uint16_t)((uint32_t)(i16_LightLevelGreen_AM - GRN_OFFSET) * 1000u / (GREEN_MAX_INDEX - GRN_OFFSET));
-    if (BLUE_MAX_INDEX > BLU_OFFSET)
-        g_Fade[FADE_CH_BLUE ].u16_BrightnessMax =
-            (uint16_t)((uint32_t)(i16_LightLevelBlue_AM  - BLU_OFFSET) * 1000u / (BLUE_MAX_INDEX  - BLU_OFFSET));
-    if (UV_MAX_INDEX > UV_OFFSET)
-        g_Fade[FADE_CH_UV   ].u16_BrightnessMax =
-            (uint16_t)((uint32_t)(i16_LightLevelUv_AM    -  UV_OFFSET) * 1000u / (UV_MAX_INDEX    -  UV_OFFSET));
-    if (WHITE_MAX_INDEX > WHT_OFFSET)
-        g_Fade[FADE_CH_WHITE].u16_BrightnessMax =
-            (uint16_t)((uint32_t)(i16_LightLevelWhite_AM - WHT_OFFSET) * 1000u / (WHITE_MAX_INDEX - WHT_OFFSET)); 
-
-   if (u8_StateMaschine == SM_MODE_SEQUENTIAL)
+   // Apply global brightness max to all channels uniformly
+    {
+        uint8_t ch;
+        for (ch = 0u; ch < 5u; ch++) {
+            g_Fade[ch].u16_BrightnessMax = 1000u;
+        }
+    } 
+    // White is physically brighter — cap at 60% of global max to balance
+    if (u8_StateMaschine == SM_MODE_SEQUENTIAL)
     {
         if (u8_Mode_Sqnt_Status != MODE_STATUS_RUN) {
             // On stop, reset sequential state so next RUN starts cleanly

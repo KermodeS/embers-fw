@@ -495,6 +495,8 @@ typedef struct {
     uint8_t  u8_DitherPhase;      // toggles for temporal dithering
 } FadeChannel_t;
 
+
+extern uint16_t u16_GlobalBrightMax;
 // Five channel fade parameter blocks — accessible from LightControl.c and main.c
 extern FadeChannel_t g_Fade[5]; // 0=Red 1=Green 2=Blue 3=UV 4=White
 
