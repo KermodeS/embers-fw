@@ -429,6 +429,8 @@ int16_t i16_W_10perc ;//= ( (WHITE_MAX_INDEX - WHT_OFFSET)/10);
 // Данные значения ре-инициализируются перед фактическим использование в TurnOnPattern()
 int16_t  i16_LightLevelRed_AM   = 100 ; 
 int16_t  i16_LightLevelGreen_AM = 100 ; 
+
+
 int16_t  i16_LightLevelBlue_AM  = 100 ; 
 int16_t  i16_LightLevelUv_AM    = 100 ; 
 int16_t  i16_LightLevelWhite_AM = 100 ; 
@@ -1694,10 +1696,22 @@ void ProcessMainStateMaschine(void)
            //
            u8_Mode_Strob_Status = MODE_STATUS_STOP ;
            //
-                      
+           /* Restore active channel brightness on return to Manual.
+            * i32_ActualPerc[] is the reliable source — updated on every Up/Down
+            * press in Manual mode. i32_ActualPerc_AM[] is NOT used here as it
+            * is only updated on channel button press, not brightness changes.
+            * White omitted: hardware-disabled (overvoltage fault DD1/VT1).   */
+           if (u8_ManualChannel == MANUAL_MODE_RED  )
+               DirectLightCtrl(MANUAL_MODE_RED,   i32_ActualPerc[MANUAL_MODE_RED  ]);
+           else if (u8_ManualChannel == MANUAL_MODE_GREEN)
+               DirectLightCtrl(MANUAL_MODE_GREEN, i32_ActualPerc[MANUAL_MODE_GREEN]);
+           else if (u8_ManualChannel == MANUAL_MODE_BLUE )
+               DirectLightCtrl(MANUAL_MODE_BLUE,  i32_ActualPerc[MANUAL_MODE_BLUE ]);
+           else if (u8_ManualChannel == MANUAL_MODE_UV   )
+               DirectLightCtrl(MANUAL_MODE_UV,    i32_ActualPerc[MANUAL_MODE_UV   ]);
       }
       //
-      //  ДАННОЕ ДЕЙСТВИЕ БЛОКИРУЕТ УПРАВЛЕНИЕ СТРОБОСКОПОМ В САМОМ ОБРАБОТЧИКЕ СТРОБОСКОПА
+      //  This flag blocks strobe handler from processing its own button while mode-switching
       u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
       //
   }
