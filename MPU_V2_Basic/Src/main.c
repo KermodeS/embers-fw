@@ -4011,7 +4011,6 @@ void Implement_RC6_Command(void)
 }
 
 uint8_t u8_NEC_TxCounter ;
-uint8_t u8_NEC_TxCounter ; 
    
 uint8_t u16_NEC_IR_RX_captureCounter ; 
       //  
