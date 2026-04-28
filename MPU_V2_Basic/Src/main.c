@@ -3920,14 +3920,14 @@ void Handle_I2C_Master_TransmitReceive(uint8_t u8_ReadSource)
 #endif /* USE_TIMEOUT */
   }
   /* (9) Generate a Stop condition to the Slave device ************************/
-  LL_I2C_GenerateStopCondition(I2C2);
+  LL_I2C_GenerateStopCondition(I2C3);
 
   /* (10) Clear pending flags, Data Command Code are checking into Slave process */
   /* Disable Last DMA bit */
-  LL_I2C_DisableLastDMA(I2C2);
+  LL_I2C_DisableLastDMA(I2C3);
 
   /* Disable acknowledge for Master next data reception */
-  LL_I2C_AcknowledgeNextData(I2C2, LL_I2C_NACK);
+  LL_I2C_AcknowledgeNextData(I2C3, LL_I2C_NACK);
 
   /* End of Master Process */
   LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_2);
