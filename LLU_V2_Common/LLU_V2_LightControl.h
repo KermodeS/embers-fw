@@ -509,6 +509,7 @@ extern FadeChannel_t g_Fade[5]; // 0=Red 1=Green 2=Blue 3=UV 4=White
 
 // Animation_Init — call once after channel tables are ready (after InitXxxLightArray_MP_V1)
 void Animation_Init(void);
+void UpdateStrobeRawIndices(void);
 
 // Animation_Update — call every main loop iteration.
 // Drives Sequential and Rainbow fades using uwTick.

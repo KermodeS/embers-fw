@@ -527,6 +527,11 @@ extern uint32_t u32_SyncLostTimer_mks      ;
 //
 extern uint8_t u8_Mode_Strob_Status;
 extern uint8_t u8_Mode_Strobe_SM;
+extern uint16_t u16_StrobeRaw_RED;
+extern uint16_t u16_StrobeRaw_GREEN;
+extern uint16_t u16_StrobeRaw_BLUE;
+extern uint16_t u16_StrobeRaw_UV;
+extern uint16_t u16_StrobeRaw_WHITE;
 extern   bool  b_StopStrobMode ;
 extern uint8_t u8_StateMaschine ;
 //
@@ -554,11 +559,12 @@ void ProcessStrobeMode(void )
       //
       if (b_StrobOn)
       {
-        if ( u8_ManualChannel == MANUAL_MODE_RED   ) SetRedLevel   ( i16_LightLevelRed_AM   ); else
-        if ( u8_ManualChannel == MANUAL_MODE_GREEN ) SetGreenLevel ( i16_LightLevelGreen_AM ); else
-        if ( u8_ManualChannel == MANUAL_MODE_BLUE  ) SetBlueLevel  ( i16_LightLevelBlue_AM  ); else
-        if ( u8_ManualChannel == MANUAL_MODE_UV    ) SetUvLevel    ( i16_LightLevelUv_AM    ); else
-        if ( u8_ManualChannel == MANUAL_MODE_WHITE ) SetWhiteLevel ( i16_LightLevelWhite_AM );
+        /* Use pre-computed perceptual raw indices to match Manual and Fade brightness. */
+        if ( u8_ManualChannel == MANUAL_MODE_RED   ) SetRedLevel   ( u16_StrobeRaw_RED   ); else
+        if ( u8_ManualChannel == MANUAL_MODE_GREEN ) SetGreenLevel ( u16_StrobeRaw_GREEN ); else
+        if ( u8_ManualChannel == MANUAL_MODE_BLUE  ) SetBlueLevel  ( u16_StrobeRaw_BLUE  ); else
+        if ( u8_ManualChannel == MANUAL_MODE_UV    ) SetUvLevel    ( u16_StrobeRaw_UV    ); else
+        if ( u8_ManualChannel == MANUAL_MODE_WHITE ) SetWhiteLevel ( u16_StrobeRaw_WHITE );
       }
       else
       {
