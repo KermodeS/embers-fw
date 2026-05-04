@@ -923,35 +923,28 @@ extern bool b_Restore_AM  ;
 //
 void TurnOffPattern(void)
 {
-  //
+  /* Instant off — zero all channels immediately.
+   * Previously used a gradual ramp-down (1ms per step) which blocked the main
+   * loop for up to ~300ms, causing mode button presses to be missed (T7).
+   * Side effect: no fade-out animation on mode switch. Acceptable trade-off. */
   b_TurnOffPatternActive = true;
   //
-  u32_Mode_Sqnt_SM  = SM_MODE_RED_UP ;  
-  u32_Mode_Rnbw_SM  = SM_MODE_RED_UP ; 
+  u32_Mode_Sqnt_SM  = SM_MODE_RED_UP;
+  u32_Mode_Rnbw_SM  = SM_MODE_RED_UP;
   //
-  //      
-  //  гасим  Red
-  u32_Delay_ms = 1;
-  while  (u32_LightLevelRed || u32_LightLevelGreen||u32_LightLevelBlue||u32_LightLevelUv||u32_LightLevelWhite)
-  {
-    if( u32_LightLevelRed  >11 ) u32_LightLevelRed   -= 10; else if (u32_LightLevelRed)  u32_LightLevelRed   -- ;
-    if( u32_LightLevelGreen>11 ) u32_LightLevelGreen -= 10; else if (u32_LightLevelGreen)   u32_LightLevelGreen -- ;
-    if( u32_LightLevelBlue >11 ) u32_LightLevelBlue  -= 10; else if (u32_LightLevelBlue)   u32_LightLevelBlue  -- ;
-    if( u32_LightLevelUv   >11 ) u32_LightLevelUv    -= 10; else if (u32_LightLevelUv)  u32_LightLevelUv    -- ;
-    if( u32_LightLevelWhite>11 ) u32_LightLevelWhite -= 10; else if (u32_LightLevelWhite)  u32_LightLevelWhite -- ;
-    //
-    SetRedLevel   ( u32_LightLevelRed   );
-    SetGreenLevel ( u32_LightLevelGreen );
-    SetBlueLevel  ( u32_LightLevelBlue  );
-    SetUvLevel    ( u32_LightLevelUv    );
-    SetWhiteLevel ( u32_LightLevelWhite );
-    //  
-    LL_mDelay(u32_Delay_ms); 
-    //     
-  }
+  u32_LightLevelRed   = 0;
+  u32_LightLevelGreen = 0;
+  u32_LightLevelBlue  = 0;
+  u32_LightLevelUv    = 0;
+  u32_LightLevelWhite = 0;
+  //
+  b_RedLightLevelUpdated   = true; SetRedLevel  (0);
+  b_GreenLightLevelUpdated = true; SetGreenLevel(0);
+  b_BlueLightLevelUpdated  = true; SetBlueLevel (0);
+  b_UvLightLevelUpdated    = true; SetUvLevel   (0);
+  b_WhiteLightLevelUpdated = true; SetWhiteLevel(0);
   //
   b_TurnOffPatternActive = false;
-  //
 }
 //
 void ProcessPowerUp(void)
@@ -1373,12 +1366,15 @@ void Process_Mode_Stroboscope(void)
     {
       //
       //+++ case SM_MODE_STROB_ON:
-        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( GammaCorrectIndex((uint16_t)i16_LightLevelRed_AM,   RED_MAX_INDEX,   RED_OFFSET, u16_GammaTable_RED) ); else
-        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( GammaCorrectIndex((uint16_t)i16_LightLevelGreen_AM, GREEN_MAX_INDEX, GRN_OFFSET, u16_GammaTable_GREEN) ); else 
-        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( GammaCorrectIndex((uint16_t)i16_LightLevelBlue_AM,  BLUE_MAX_INDEX,  BLU_OFFSET, u16_GammaTable_BLUE) ); else
-        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( GammaCorrectIndex((uint16_t)i16_LightLevelUv_AM,    UV_MAX_INDEX,    UV_OFFSET,  u16_GammaTable_UV) ); else       
-        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( GammaCorrectIndex((uint16_t)i16_LightLevelWhite_AM, WHITE_MAX_INDEX, WHT_OFFSET, u16_GammaTable_WHITE) );         
-        //    
+        // Dead code — Process_Mode_Stroboscope() returns immediately at entry.
+        // Active strobe output runs in stm32f4xx_it.c using u16_StrobeRaw_*.
+        // Updated for consistency: use pre-computed perceptual raw indices.
+        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( u16_StrobeRaw_RED   ); else
+        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( u16_StrobeRaw_GREEN ); else
+        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( u16_StrobeRaw_BLUE  ); else
+        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( u16_StrobeRaw_UV    ); else
+        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( u16_StrobeRaw_WHITE );
+        //
         LL_mDelay(u16_Mode_Strob_StepDelay_A_ms); //+++   u8_Mode_Strobe_SM = SM_MODE_STROB_OFF;   
         //
        //+++  break;
@@ -1503,19 +1499,15 @@ int16_t i16_W_10perc ;//= ( (WHITE_MAX_INDEX - WHT_OFFSET)/10);
 void RestoreActualMax (void);
 void RestoreActualMax (void)
 {
-  // Восстанавливаем амплитудные значения каждого канала
-  i16_LightLevelRed_AM   =  i32_ActualPerc_AM [_ACTUAL_RED]/ PRCNT_SHIFT * i16_R_10perc  ;     
-  i16_LightLevelGreen_AM =  i32_ActualPerc_AM [_ACTUAL_GRN]/ PRCNT_SHIFT * i16_G_10perc  ; 
-  i16_LightLevelBlue_AM  =  i32_ActualPerc_AM [_ACTUAL_BLU]/ PRCNT_SHIFT * i16_B_10perc  ; 
-  i16_LightLevelUv_AM    =  i32_ActualPerc_AM [_ACTUAL_UV ]/ PRCNT_SHIFT * i16_U_10perc  ; 
-  i16_LightLevelWhite_AM =  i32_ActualPerc_AM [_ACTUAL_WHT]/ PRCNT_SHIFT * i16_W_10perc  ;  
-  // 
-  // Корректируем максимум для случая 100%
-  if ( i32_ActualPerc_AM [_ACTUAL_RED] == 100 ) i16_LightLevelRed_AM    -= 2;
-  if ( i32_ActualPerc_AM [_ACTUAL_GRN] == 100 ) i16_LightLevelGreen_AM  -= 2;
-  if ( i32_ActualPerc_AM [_ACTUAL_BLU] == 100 ) i16_LightLevelBlue_AM   -= 2;
-  if ( i32_ActualPerc_AM [_ACTUAL_UV ] == 100 ) i16_LightLevelUv_AM     -= 2;
-  if ( i32_ActualPerc_AM [_ACTUAL_WHT] == 100 ) i16_LightLevelWhite_AM  -= 2;
+  /* Restore AM hardware indices using PerceptualToRaw() to match the Fade engine
+   * gamma curve. Replaces old linear formula (i16_G_10perc * percent / PRCNT_SHIFT)
+   * which produced different brightness than PerceptualToRaw at equivalent settings.
+   * i32_ActualPerc_AM[] is 0-100; multiply by 10 for PerceptualToRaw 0-1000 scale. */
+  i16_LightLevelRed_AM   = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_RED] * 10), RED_MAX_INDEX,   0u, 1230u);
+  i16_LightLevelGreen_AM = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_GRN] * 10), GREEN_MAX_INDEX, 0u, 1449u);
+  i16_LightLevelBlue_AM  = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_BLU] * 10), BLUE_MAX_INDEX,  0u, 1449u);
+  i16_LightLevelUv_AM    = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_UV ] * 10), UV_MAX_INDEX,    1u, 1449u);
+  i16_LightLevelWhite_AM = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_WHT] * 10), WHITE_MAX_INDEX, 0u, 1449u);
   //
   u32_LightLevelRed   = 0;
   u32_LightLevelGreen = 0;
@@ -1756,14 +1748,27 @@ void ProcessMainStateMaschine(void)
            u32_LightLevelBlue  = 0;
            u32_LightLevelUv    = 0;
            u32_LightLevelWhite = 0;
-           if (u8_ManualChannel == MANUAL_MODE_RED  )
-               DirectLightCtrl(MANUAL_MODE_RED,   i32_ActualPerc[MANUAL_MODE_RED  ]);
-           else if (u8_ManualChannel == MANUAL_MODE_GREEN)
-               DirectLightCtrl(MANUAL_MODE_GREEN, i32_ActualPerc[MANUAL_MODE_GREEN]);
-           else if (u8_ManualChannel == MANUAL_MODE_BLUE )
-               DirectLightCtrl(MANUAL_MODE_BLUE,  i32_ActualPerc[MANUAL_MODE_BLUE ]);
-           else if (u8_ManualChannel == MANUAL_MODE_UV   )
-               DirectLightCtrl(MANUAL_MODE_UV,    i32_ActualPerc[MANUAL_MODE_UV   ]);
+           /* Fast restore on mode transition — jump directly to target level.
+            * DirectLightCtrl() ramps over ~3s which blocks button processing (T7).
+            * On mode entry, instant restore is acceptable. Up/Down still uses
+            * the full smooth ramp via DirectLightCtrl(). */
+           { uint16_t u16_Target = PerceptualToRaw(
+                 (uint16_t)(i32_ActualPerc[u8_ManualChannel] * 10),
+                 (u8_ManualChannel == MANUAL_MODE_RED  ) ? RED_MAX_INDEX   :
+                 (u8_ManualChannel == MANUAL_MODE_GREEN) ? GREEN_MAX_INDEX :
+                 (u8_ManualChannel == MANUAL_MODE_BLUE ) ? BLUE_MAX_INDEX  : UV_MAX_INDEX,
+                 (u8_ManualChannel == MANUAL_MODE_UV   ) ? 1u : 0u,
+                 (u8_ManualChannel == MANUAL_MODE_RED  ) ? 1230u : 1449u);
+             if (u8_ManualChannel == MANUAL_MODE_RED  ) { u32_LightLevelRed   = u16_Target; b_RedLightLevelUpdated  =true; UpdateRedLevelFast_MP  (u16_Target); }
+             if (u8_ManualChannel == MANUAL_MODE_GREEN) { u32_LightLevelGreen = u16_Target; b_GreenLightLevelUpdated=true; UpdateGreenLevelFast_MP(u16_Target); }
+             if (u8_ManualChannel == MANUAL_MODE_BLUE ) { u32_LightLevelBlue  = u16_Target; b_BlueLightLevelUpdated =true; UpdateBlueLevelFast_MP (u16_Target); }
+             if (u8_ManualChannel == MANUAL_MODE_UV   ) { u32_LightLevelUv    = u16_Target; b_UvLightLevelUpdated   =true; UpdateUvLevelFast_MP   (u16_Target); }
+             /* Sync AM index so subsequent Up/Down ramps start from correct position */
+             i16_LightLevelRed_AM   = (u8_ManualChannel == MANUAL_MODE_RED  ) ? (int16_t)u16_Target : i16_LightLevelRed_AM;
+             i16_LightLevelGreen_AM = (u8_ManualChannel == MANUAL_MODE_GREEN) ? (int16_t)u16_Target : i16_LightLevelGreen_AM;
+             i16_LightLevelBlue_AM  = (u8_ManualChannel == MANUAL_MODE_BLUE ) ? (int16_t)u16_Target : i16_LightLevelBlue_AM;
+             i16_LightLevelUv_AM    = (u8_ManualChannel == MANUAL_MODE_UV   ) ? (int16_t)u16_Target : i16_LightLevelUv_AM;
+           }
       }
       //
       //  This flag blocks strobe handler from processing its own button while mode-switching
@@ -1815,7 +1820,7 @@ void ProcessMainStateMaschine(void)
         i16_LightLevelBlue_AM  -= i16_B_10perc; if (i16_LightLevelBlue_AM  < 1) i16_LightLevelBlue_AM  = 1;
         i16_LightLevelUv_AM    -= i16_U_10perc; if (i16_LightLevelUv_AM    < 1) i16_LightLevelUv_AM    = 1;
         i16_LightLevelWhite_AM -= i16_W_10perc; if (i16_LightLevelWhite_AM < 1) i16_LightLevelWhite_AM = 1;
-        if (u16_GlobalBrightMax > 100u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 100u;
+        if (u16_GlobalBrightMax > 200u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 200u;
       /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
       { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
       { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
@@ -1825,6 +1830,19 @@ void ProcessMainStateMaschine(void)
         i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
         i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
     }
+
+      /* Recover any fade channels stuck at zero after rapid Down presses */
+      { uint8_t fi;
+        for (fi=0u; fi<5u; fi++) {
+            if (g_Fade[fi].i32_PercX10 > (int32_t)(u16_GlobalBrightMax * 10u))
+                g_Fade[fi].i32_PercX10 = (int32_t)(u16_GlobalBrightMax * 10u);
+            if (g_Fade[fi].i32_PercX10 <= 0 && g_Fade[fi].u8_Dir == 0u) {
+                g_Fade[fi].i32_PercX10 = 0;
+                g_Fade[fi].u8_Dir      = 1u;
+                g_Fade[fi].u32_SubStepAccum = 0u;
+            }
+        }
+      }
     u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF; /* clear any unhandled button */
     Process_Mode_Sequential();
     return;
@@ -1867,7 +1885,7 @@ void ProcessMainStateMaschine(void)
       u8_Mode_Strobe_SM = SM_MODE_STROB_ON; 
     }
     //
-    // Коррекция канала свечения и его яркости
+    // Adjust active channel and brightness level
     if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_UP )
     {   u8_ManualButton  = MANUAL_MODE_BUTTON_UNDEF;
       //
@@ -1895,7 +1913,7 @@ void ProcessMainStateMaschine(void)
         i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
         i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
     }
-    // Уменьшение яркости строба
+    // Decrease strobe brightness
     if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
     {   u8_ManualButton  = MANUAL_MODE_BUTTON_UNDEF;
       //
@@ -1908,7 +1926,7 @@ void ProcessMainStateMaschine(void)
       i16_LightLevelUv_AM-=i16_U_10perc;      if (i16_LightLevelUv_AM<(int16_t)1)        i16_LightLevelUv_AM=1;
       //
       i16_LightLevelWhite_AM-=i16_W_10perc;   if (i16_LightLevelWhite_AM<(int16_t)1)     i16_LightLevelWhite_AM=1;
-      if (u16_GlobalBrightMax > 100u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 100u;
+      if (u16_GlobalBrightMax > 200u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 200u;
       /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
       { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
       { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
@@ -1917,10 +1935,22 @@ void ProcessMainStateMaschine(void)
         i32_ActualPerc[MANUAL_MODE_GREEN] = i32_P;
         i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
         i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
-      // 
+      /* Clamp all fade channels to new ceiling and recover any stuck-dark channels.
+       * Rapid Down presses can force i32_PercX10 to zero with Dir=down, leaving
+       * channels permanently silenced. Reset Dir to UP to rejoin the animation. */
+      { uint8_t fi;
+        for (fi=0u; fi<5u; fi++) {
+            if (g_Fade[fi].i32_PercX10 > (int32_t)(u16_GlobalBrightMax * 10u))
+                g_Fade[fi].i32_PercX10 = (int32_t)(u16_GlobalBrightMax * 10u);
+            if (g_Fade[fi].i32_PercX10 <= 0 && g_Fade[fi].u8_Dir == 0u) {
+                g_Fade[fi].i32_PercX10 = 0;
+                g_Fade[fi].u8_Dir      = 1u;
+            }
+        }
+      }
     }
-    //   
-    // Изменение канала строба
+    //
+    // Change strobe/animation channel
     if (u8_ManualButton == MANUAL_MODE_BUTTON_RED )
     {   u8_ManualButton  = MANUAL_MODE_BUTTON_UNDEF;   u8_ManualChannel = MANUAL_MODE_RED ;     }  
     //
@@ -1990,7 +2020,7 @@ void ProcessMainStateMaschine(void)
         i16_LightLevelBlue_AM  -= i16_B_10perc; if (i16_LightLevelBlue_AM  < 1) i16_LightLevelBlue_AM  = 1;
         i16_LightLevelUv_AM    -= i16_U_10perc; if (i16_LightLevelUv_AM    < 1) i16_LightLevelUv_AM    = 1;
         i16_LightLevelWhite_AM -= i16_W_10perc; if (i16_LightLevelWhite_AM < 1) i16_LightLevelWhite_AM = 1;
-        if (u16_GlobalBrightMax > 100u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 100u;
+        if (u16_GlobalBrightMax > 200u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 200u;
       /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
       { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
       { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
@@ -2000,6 +2030,19 @@ void ProcessMainStateMaschine(void)
         i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
         i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
     }
+
+      /* Recover any fade channels stuck at zero after rapid Down presses */
+      { uint8_t fi;
+        for (fi=0u; fi<5u; fi++) {
+            if (g_Fade[fi].i32_PercX10 > (int32_t)(u16_GlobalBrightMax * 10u))
+                g_Fade[fi].i32_PercX10 = (int32_t)(u16_GlobalBrightMax * 10u);
+            if (g_Fade[fi].i32_PercX10 <= 0 && g_Fade[fi].u8_Dir == 0u) {
+                g_Fade[fi].i32_PercX10 = 0;
+                g_Fade[fi].u8_Dir      = 1u;
+                g_Fade[fi].u32_SubStepAccum = 0u;
+            }
+        }
+      }
     u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF; /* clear any unhandled button */
   }    
   //
@@ -2064,7 +2107,8 @@ void ProcessMainStateMaschine(void)
       /* Sync global brightness so animation modes inherit Manual level.
        * Set directly from i32_ActualPerc to keep in lockstep. */
       u16_GlobalBrightMax = (uint16_t)(i32_ActualPerc[u32_ActualChannel] * 10u);
-      if (u16_GlobalBrightMax < 100u && i32_ActualPerc[u32_ActualChannel] > 0) u16_GlobalBrightMax = 100u;
+      /* Allow zero in Manual (LED fully off) but floor animations at 200 when active */
+      if (u16_GlobalBrightMax > 0u && u16_GlobalBrightMax < 200u) u16_GlobalBrightMax = 200u;
       { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
       //
       if ( b_Grouped  ) 
@@ -3235,9 +3279,24 @@ static uint8_t StepChannel(uint8_t u8_Ch, uint32_t u32_NowMs)
         p->i32_PercX10 = i32_MaxX10;
         p->u8_Dir = 0u;
     }
-    // Step = (full range 10000 percX10 units) * elapsed_ms / duration_ms
-    i32_Step = (int32_t)((10000u * u32_Elapsed) / p->u32_FadeDurationMs);
-    if (i32_Step < 1) i32_Step = 1;
+    // Constant-duration step using fractional accumulator to avoid integer truncation.
+    // At low brightness (small MaxX10), naive MaxX10*elapsed/duration truncates to 0.
+    // Accumulate x1000 scaled units; advance i32_PercX10 only when accumulator >= 1000.
+    // Example: BrightnessMax=200, elapsed=2ms, duration=12000ms:
+    //   accum += 2000*2*1000/12000 = 333 per tick
+    //   after 3 ticks: accum=999 → step=0; 4th tick: accum=1332 → step=1, accum=332
+    //   2000 units at this rate takes ~6000ms = same proportion as 10000 in 12000ms.
+    { uint32_t u32_StepX1000 = (i32_MaxX10 > 0 && p->u32_FadeDurationMs > 0u)
+          ? ((uint32_t)i32_MaxX10 * u32_Elapsed * 1000u) / p->u32_FadeDurationMs
+          : 1000u;
+      p->u32_SubStepAccum += u32_StepX1000;
+      i32_Step = (int32_t)(p->u32_SubStepAccum / 1000u);
+      p->u32_SubStepAccum %= 1000u;
+    }
+    if (i32_Step == 0) {
+        OutputChannel(u8_Ch, (uint16_t)(p->i32_PercX10 / 10), (uint8_t)(p->i32_PercX10 % 10));
+        return 0u;
+    }
 
     if (p->u8_Dir) {
         p->i32_PercX10 += i32_Step;
@@ -3286,12 +3345,13 @@ void Animation_Init(void)
         g_Fade[i].i32_PercX10        = 0;
         g_Fade[i].u8_Dir             = 1u;
         g_Fade[i].u8_DitherPhase     = 0u;
+        g_Fade[i].u32_SubStepAccum   = 0u;
     }
     // Per-channel durations proportional to table size for even visual speed
-    g_Fade[FADE_CH_RED  ].u32_FadeDurationMs = 9000u; // 2100 entries
+    g_Fade[FADE_CH_RED  ].u32_FadeDurationMs = 12000u; // equalised: all channels same duration
     g_Fade[FADE_CH_GREEN].u32_FadeDurationMs = 12000u; // 2900 entries
     g_Fade[FADE_CH_BLUE ].u32_FadeDurationMs = 12000u; // 2900 entries
-    g_Fade[FADE_CH_UV   ].u32_FadeDurationMs = 11400u; // 2800 entries
+    g_Fade[FADE_CH_UV   ].u32_FadeDurationMs = 12000u; // equalised
     g_Fade[FADE_CH_WHITE].u32_FadeDurationMs = 12000u; // 2900 entries
     //
     u8_SeqActiveIdx = 0u;

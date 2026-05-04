@@ -493,6 +493,7 @@ typedef struct {
     int32_t  i32_PercX10;         // current perceptual level × 10 (0-10000)
     uint8_t  u8_Dir;              // 1 = fading up, 0 = fading down
     uint8_t  u8_DitherPhase;      // toggles for temporal dithering
+    uint32_t u32_SubStepAccum;    // fractional step accumulator (x1000 units)
 } FadeChannel_t;
 
 
