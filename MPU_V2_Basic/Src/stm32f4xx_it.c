@@ -164,10 +164,10 @@ extern uint32_t u32_WhiteChannelWaitFlag ;
   * @param  None
   * @retval None
   */
-// „ј—“ќ“ј ??? 1000 или 100 √ц ?
-// „астота задаетс€ на старте SysTick_Config(84000000 / (1000*1));//84000
-// Ёто был 1 мс таймер
-// Ќастроен на 38к√ц.
+// FREQUENCY ??? 1000 or 100 Hz?
+// Frequency set at startup: SysTick_Config(84000000 / (1000*1)); // 84000
+// This was a 1ms timer
+// Currently configured for 38kHz.
 extern uint32_t u32_ST_captureActual;
 
 void SysTick_Handler(void)

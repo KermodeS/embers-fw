@@ -3237,8 +3237,9 @@ static void OutputChannel(uint8_t u8_Ch, uint16_t u16_Perc, uint8_t u8_Frac10)
 static void SilenceChannel(uint8_t u8_Ch)
 {
     FadeChannel_t *p = &g_Fade[u8_Ch];
-    p->i32_PercX10 = 0;
-    p->u8_Dir      = 1u;
+    p->i32_PercX10      = 0;
+    p->u8_Dir           = 1u;
+    p->u32_SubStepAccum = 0u; // Clear residue on silence so next activation starts clean
 #ifdef MPU_V2_DEVICE
     switch (u8_Ch) {
         case FADE_CH_RED:   SetRedLevel  (0u); break;
@@ -3254,8 +3255,9 @@ static void SilenceChannel(uint8_t u8_Ch)
 // StartChannelUp — set direction to UP and record current tick.
 static void StartChannelUp(uint8_t u8_Ch, uint32_t u32_NowMs)
 {
-    g_Fade[u8_Ch].u8_Dir        = 1u;
-    g_Fade[u8_Ch].u32_LastTickMs = u32_NowMs;
+    g_Fade[u8_Ch].u8_Dir          = 1u;
+    g_Fade[u8_Ch].u32_LastTickMs  = u32_NowMs;
+    g_Fade[u8_Ch].u32_SubStepAccum = 0u; // Clear residue so prior brightness ceiling does not bleed into next phase
 }
 
 // StepChannel — advance one channel by elapsed ms.
