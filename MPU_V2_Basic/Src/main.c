@@ -3758,20 +3758,22 @@ void Handle_I2C_Master_Transmit(uint8_t u8_WrightDest )
 #endif /* USE_TIMEOUT */
 
   /* Loop until DMA transfer complete event */
+  
+
+{ uint32_t u32_I2C_T0 = uwTick;
   while(!ubMasterTransferComplete)
   {
-#if (USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag()) 
+    if ((uwTick - u32_I2C_T0) > 50U)
     {
-      if(Timeout-- == 0)
-      {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
-      }
+      ubMasterTransferComplete = 0;
+      NVIC_DisableIRQ(I2C3_EV_IRQn);
+      NVIC_DisableIRQ(I2C3_ER_IRQn);
+      LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_5);
+      LL_I2C_GenerateStopCondition(I2C3);
+      return; /* STM8 TX timeout: abort, do not hang */
     }
-#endif /* USE_TIMEOUT */
   }
+}
 
   /* (6) Generate a Stop condition to the Slave device ************************/
   LL_I2C_GenerateStopCondition(I2C3);
@@ -3824,6 +3826,13 @@ void Handle_I2C_Master_TransmitReceive(uint8_t u8_ReadSource)
 /*  pMasterTransmitBuffer    = (uint32_t*)(&read_data[0]);
   ubMasterNbDataToTransmit = (1+2);*/
   //
+
+  /* Skip transaction if I2C3 bus is still BUSY from a previous error */
+  /* Re-enable I2C3 IRQs (may have been masked by a previous timeout cleanup) */
+  NVIC_EnableIRQ(I2C3_EV_IRQn);
+  NVIC_EnableIRQ(I2C3_ER_IRQn);
+  /* Skip transaction if I2C3 bus is still BUSY from a previous error */
+  if (LL_I2C_IsActiveFlag_BUSY(I2C3)) return;
   if ( u8_ReadSource == I2C_READ_KBD )
   {
     aCommandCode_KBD[0] = (char*)(&u8_R_Array[0]);
@@ -3865,22 +3874,22 @@ void Handle_I2C_Master_TransmitReceive(uint8_t u8_ReadSource)
   Timeout = DMA_SEND_TIMEOUT_TC_MS;
 #endif /* USE_TIMEOUT */
 
-  /* Loop until DMA transfer complete event */
-  while(!ubMasterTransferComplete)
-  {
-#if (USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag()) 
+  /* Loop until DMA transfer complete event (50ms timeout guards against STM8 absent/NAK) */
+  { uint32_t u32_I2C_T0 = uwTick;
+    while(!ubMasterTransferComplete)
     {
-      if(Timeout-- == 0)
+      if ((uwTick - u32_I2C_T0) > 50U)
       {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
+        ubMasterTransferComplete = 0;
+        NVIC_DisableIRQ(I2C3_EV_IRQn);  /* mask EV ISR before tearing down DMA */
+        NVIC_DisableIRQ(I2C3_ER_IRQn);
+        LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_5);
+        LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_2);
+        LL_I2C_GenerateStopCondition(I2C3);
+        return; /* STM8 TX timeout: abort, do not hang */       
       }
     }
-#endif /* USE_TIMEOUT */
-  }
-
+  }  
   /* Reset ubMasterTransferComplete flag */
   ubMasterTransferComplete = 0;
 
@@ -3904,21 +3913,23 @@ void Handle_I2C_Master_TransmitReceive(uint8_t u8_ReadSource)
   Timeout = DMA_SEND_TIMEOUT_TC_MS;
 #endif /* USE_TIMEOUT */
 
-  /* Loop until DMA transfer complete event */
-  while(!ubMasterTransferComplete)
-  {
-#if (USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag()) 
+  /* Loop until DMA transfer complete event (50ms timeout guards against STM8 absent/NAK) */
+  { uint32_t u32_I2C_T0 = uwTick;
+    while(!ubMasterTransferComplete)
     {
-      if(Timeout-- == 0)
+      if ((uwTick - u32_I2C_T0) > 50U)
       {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
+        ubMasterTransferComplete = 0;
+        NVIC_DisableIRQ(I2C3_EV_IRQn);  /* mask EV ISR before tearing down DMA */
+        NVIC_DisableIRQ(I2C3_ER_IRQn);
+        LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_5);
+        LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_2);
+        LL_I2C_GenerateStopCondition(I2C3);
+        return; /* STM8 RX timeout: abort, do not hang */
       }
     }
-#endif /* USE_TIMEOUT */
   }
+
   /* (9) Generate a Stop condition to the Slave device ************************/
   LL_I2C_GenerateStopCondition(I2C3);
 
@@ -3982,15 +3993,14 @@ void Transfer_Error_Callback()
   */
 void Error_Callback(void)
 {
-  /* Disable I2C1_EV_IRQn */
-  NVIC_DisableIRQ(I2C1_EV_IRQn);
-
-  /* Disable I2C1_ER_IRQn */
-  NVIC_DisableIRQ(I2C1_ER_IRQn);
-
-  /* Unexpected event : Set LED2 to Blinking mode to indicate error occurs */
-  //  LED_Blinking(LED_BLINK_ERROR);
+  /* I2C3 error (e.g. STM8 NACK): issue STOP, drain DMA streams, unblock spin-wait.
+   * Previous code incorrectly disabled I2C1 IRQs here — I2C1 is not used. */
+  LL_I2C_GenerateStopCondition(I2C3);
+  LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_5);
+  LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_2);
+  ubMasterTransferComplete = 1;  /* unblock spin-wait so timeout path exits cleanly */
 }
+
 
 
 // ==================== I2C Конец  кода ============================================== //
@@ -4237,6 +4247,34 @@ int main(void)
 #if ENABLE_I2C_IRDA
   // Configure DMA1_Stream5 (DMA IP configuration in transfer memory to peripheral (I2C3)  //
   Configure_DMA();
+
+/* I2C3 bus recovery: clock SCL 9 times to release any stuck slave.
+ * Required if STM8 was left mid-byte by a previous reset. */
+LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
+LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_8, LL_GPIO_MODE_OUTPUT);      /* SCL as GPIO */
+LL_GPIO_SetPinOutputType(GPIOA, LL_GPIO_PIN_8, LL_GPIO_OUTPUT_OPENDRAIN);
+LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_8, LL_GPIO_PULL_UP);
+LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_9, LL_GPIO_MODE_OUTPUT);      /* SDA as GPIO */
+LL_GPIO_SetPinOutputType(GPIOC, LL_GPIO_PIN_9, LL_GPIO_OUTPUT_OPENDRAIN);
+LL_GPIO_SetPinPull(GPIOC, LL_GPIO_PIN_9, LL_GPIO_PULL_UP);
+for (int i = 0; i < 9; i++)                                         /* 9 SCL pulses */
+{
+    LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_8);
+    LL_mDelay(1);
+    LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_8);
+    LL_mDelay(1);
+}
+
+/* STOP condition: SCL high, SDA low→high */
+LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_8);   /* SCL high */
+LL_mDelay(1);
+LL_GPIO_ResetOutputPin(GPIOC, LL_GPIO_PIN_9); /* SDA low */
+LL_mDelay(1);
+LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_9);   /* SDA high = STOP */
+LL_mDelay(1);
+/* Pins will be reconfigured to AF4 by Configure_I2C_Master() below */
+
   //
   // Configure I2C1 (I2C IP configuration in Slave mode and related GPIO initialization) //
   // Configure_I2C_Slave();
@@ -4257,7 +4295,7 @@ int main(void)
   u8_SlaveAddress       = IRDA_ADDRESS;
   //                    //1 +4+6 = 11   
   // u8_ControlLEDs[ 1 +4+6];  // Первый байт, заголовок, данные
-  // Handle_I2C_Master_Transmit(I2C_WRIGHT_LED); // DISABLED - STM8 not responding
+  Handle_I2C_Master_Transmit(I2C_WRIGHT_LED); /* Initial handshake: matches LPU working implementation */
 #endif /* ENABLE_I2C_IRDA */
   //
   // ==================== I2C Конец  кода ============================================== //
