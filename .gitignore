@@ -37,3 +37,4 @@ softAP_0250/.settings/
 *.DS_Store
 *~
 Thumbs.db
+esp32_fw/build/
