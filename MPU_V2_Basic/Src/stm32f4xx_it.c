@@ -164,10 +164,10 @@ extern uint32_t u32_WhiteChannelWaitFlag ;
   * @param  None
   * @retval None
   */
-// ЧАСТОТА ??? 1000 или 100 Гц ?
-// Частота задается на старте SysTick_Config(84000000 / (1000*1));//84000
-// Это был 1 мс таймер
-// Настроен на 38кГц.
+// FREQUENCY ??? 1000 or 100 Hz?
+// Frequency set at startup: SysTick_Config(84000000 / (1000*1)); // 84000
+// This was a 1ms timer
+// Currently configured for 38kHz.
 extern uint32_t u32_ST_captureActual;
 
 void SysTick_Handler(void)
@@ -325,170 +325,6 @@ void TIM3_IRQHandler(void)
     {
       u16_LightLevel    = GRN_OFFSET ;
     }
-    else
-    if ( b_GreenLightLevelUpdated == true )
-    {
-      if (
-            ( (u8_StateMaschine ==  SM_MODE_SEQUENTIAL ) && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN) )
-            ||
-            ( (u8_StateMaschine ==  SM_MODE_RAINBOW    ) && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN) )    
-         ) 
-      {
-          if  (  
-                (  (u32_Mode_Sqnt_SM == SM_MODE_GREEN_UP) && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN) )  
-                ||  
-                (  (u32_Mode_Rnbw_SM == SM_MODE_GREEN_UP) && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN) )
-              )
-          {        //
-                #ifdef  LPU_V2_DEVICE      
-                                   u16_LightLevel = u16_GreenRefference_LP [u32_LightLevelGreen]; 
-                UpdateGreenLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                  
-                #endif    
-                #ifdef MPU_V2_DEVICE   // 20..1919      // Индексы шим таблицы  0.255 
-                UpdateGreenLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-                #endif            
-                #ifdef HPU_V2_DEVICE   
-                                   u16_LightLevel = u16_GreenRefference_HP [u32_LightLevelGreen]; 
-                UpdateGreenLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                           
-                #endif
-                //
-                u32_SubCounter++;
-                if ( u32_SubCounter>= u32_SubCounterLevel)
-                {
-                  u32_SubCounter = 0;
-                  u16_LightLevel ++ ; // u32_LightLevelRed++; 
-                  //
-                  u32_SubCounterLevel = u8_GreenLightRepeatFactor_MP[u16_LightLevel-GRN_OFFSET]; 
-                  //
-                }
-                //
-                if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-                {
-                  // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                  // без синхро
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelGreen_AM-2) 
-                    {
-                      u32_Mode_Sqnt_SM    = SM_MODE_GREEN_DOWN;                       
-                    } 
-                  }
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelGreen_AM-2)
-                    {
-                      u32_Mode_Sqnt_SM    = SM_MODE_GREEN_DOWN;          
-                      u8_Mode_Sqnt_Status = MODE_STATUS_STOP;                    
-                    } 
-                  }                                
-                }
-                else
-                if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-                {
-                  // КОД СТРОГО ДЛЯ РАДУГИ
-                  // без синхро
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelGreen_AM-2)  // Радуга. Макс желтый.                               
-                    {
-                       u32_Mode_Rnbw_SM    = SM_MODE_RED_DOWN;  // Макс желтый, получаем зеленый                         
-                    } 
-                  }
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelGreen_AM-2)
-                    {
-                       u32_Mode_Rnbw_SM    = SM_MODE_RED_DOWN;   // Макс красный, получаем зеленый   
-                        u8_Mode_Rnbw_Status = MODE_STATUS_STOP;                    
-                    } 
-                  }                                
-                }
-          }       
-          else
-            if (
-                  ( ( u32_Mode_Sqnt_SM == SM_MODE_GREEN_DOWN ) && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN) )
-                  || 
-                  ( ( u32_Mode_Rnbw_SM == SM_MODE_GREEN_DOWN ) && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN) )
-                )    
-            {    //
-                  #ifdef  LPU_V2_DEVICE          
-                                     u16_LightLevel = u16_RedRefference_LP [u32_LightLevelRed]; 
-                  UpdateRedLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                 
-                  #endif
-                  #ifdef MPU_V2_DEVICE   // 20 -1919                             0- 255
-                                  //   u16_LightLevel = u16_RedRefference_MP [u32_LightLevelRed]; 
-                  UpdateGreenLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-                  #endif
-                  #ifdef HPU_V2_DEVICE   
-                                     u16_LightLevel = u16_GreenRefference_HP [u32_LightLevelGreen]; 
-                  UpdateGreenLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                        
-                  #endif
-                  //
-                  u32_SubCounter++;
-                  if ( u32_SubCounter>= u32_SubCounterLevel)
-                  {
-                     u32_SubCounter = 0;
-                     u16_LightLevel -- ; //u32_LightLevelRed--; 
-                     //
-                     u32_SubCounterLevel = u8_GreenLightRepeatFactor_MP[u16_LightLevel-GRN_OFFSET]; 
-                     //                 
-                  }
-                  //
-                  if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-                  {
-                    // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                    if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                    {
-                      if (u16_LightLevel==(GRN_OFFSET-1))  
-                      { // Загашен зеленый. Разжигаем синий
-                        u32_Mode_Sqnt_SM = SM_MODE_BLUE_UP; 
-                     // u8_Mode_Sqnt_Status = MODE_STATUS_STOP;
-                      }
-                    }
-                    //
-                    // Работа с синхронизацией
-                    if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                    {
-                      if (u16_LightLevel==(GRN_OFFSET-1))  //  == 0    u32_LightLevelRed
-                      { // Загашен зеленый. Разжигаем синий
-                        u32_Mode_Sqnt_SM = SM_MODE_BLUE_UP; 
-                        u8_Mode_Sqnt_Status = MODE_STATUS_STOP;
-                      }
-                    }                                  
-                  }
-                  else
-                  if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-                  {
-                    // КОД СТРОГО ДЛЯ РАДУГИ
-                    if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                    {
-                      if (u16_LightLevel==(GRN_OFFSET-1))  
-                      { // Загашен зеленый. Горит только синий. Гасим синий
-                        u32_Mode_Rnbw_SM = SM_MODE_BLUE_DOWN; 
-                     // u8_Mode_Sqnt_Status = MODE_STATUS_STOP;
-                      }
-                    }
-                    //
-                    // Работа с синхронизацией
-                    if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                    {
-                      if (u16_LightLevel==(GRN_OFFSET-1))  //  == 0    u32_LightLevelRed
-                      { // Загашен зеленый. Горит только синий. Гасим синий
-                        u32_Mode_Rnbw_SM = SM_MODE_BLUE_DOWN; 
-                        u8_Mode_Rnbw_Status = MODE_STATUS_STOP;
-                      }
-                    }   
-                  } 
-                  //     
-        }
-      }  
-      
-    }
-    //    
-    //
-    // А это фрагмент для обновления яркости свечения. 
     if ( b_UpdateGreenLightLevel)
     {
       b_UpdateGreenLightLevel  = false;
@@ -528,161 +364,6 @@ void TIM4_IRQHandler(void)
     //
     if (b_TurnOffPatternActive == true)
       u16_LightLevel = WHT_OFFSET;
-    else
-    if (b_WhiteLightLevelUpdated == true)
-    {
-      if (
-           ( (u8_StateMaschine ==  SM_MODE_SEQUENTIAL ) && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN ) )
-           ||
-           ( (u8_StateMaschine ==  SM_MODE_RAINBOW    ) && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN ) ) 
-          )
-      {
-          if ( 
-                ( ( u32_Mode_Sqnt_SM == SM_MODE_WHITE_UP)  && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN ) )
-                ||    
-                ( ( u32_Mode_Rnbw_SM == SM_MODE_WHITE_UP)  && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN ) )
-              )
-          {        //
-                #ifdef  LPU_V2_DEVICE      
-                                   u16_LightLevel = u16_WhiteRefference_LP [u32_LightLevelWhite]; 
-                UpdateWhiteLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                  
-                #endif    
-                #ifdef MPU_V2_DEVICE   // 20..1919      // Индексы шим таблицы  0.255 
-                UpdateWhiteLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-                #endif            
-                #ifdef HPU_V2_DEVICE   
-                                   u16_LightLevel = u16_WhiteRefference_HP [u32_LightLevelWhite]; 
-                UpdateWhiteLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                           
-                #endif
-               //
-                u32_SubCounter++;
-                if ( u32_SubCounter>= u32_SubCounterLevel)
-                {
-                  u32_SubCounter = 0;
-                  u16_LightLevel ++ ; // u32_LightLevelRed++; 
-                  
-                  u32_SubCounterLevel = u8_WhiteLightRepeatFactor_MP[u16_LightLevel-WHT_OFFSET];   
-                }
-                //
-                if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-                {
-                  // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                  //
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelWhite_AM-2) 
-                      u32_Mode_Sqnt_SM = SM_MODE_WHITE_DOWN;  
-                  }
-                  //
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelWhite_AM-2) 
-                    {
-                      u32_Mode_Sqnt_SM    = SM_MODE_WHITE_DOWN;       
-                      u8_Mode_Sqnt_Status = MODE_STATUS_STOP;  
-                    }
-                  }                                
-                }
-                else
-                if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-                {
-                  // КОД СТРОГО ДЛЯ РАДУГИ
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelWhite_AM-2) 
-                      u32_Mode_Rnbw_SM = SM_MODE_WHITE_DOWN;   
-                  }
-                  //
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelWhite_AM-2) 
-                    {
-                      u32_Mode_Rnbw_SM    = SM_MODE_WHITE_DOWN;       
-                      u8_Mode_Rnbw_Status = MODE_STATUS_STOP;  
-                    }
-                  }                                
-
-                }
-
-          }       
-          else
-            if ( 
-                  ( (u32_Mode_Sqnt_SM == SM_MODE_WHITE_DOWN) && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN ) ) 
-                  || 
-                  ( (u32_Mode_Rnbw_SM == SM_MODE_WHITE_DOWN) && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN ) ) 
-                )  
-            {    //
-                  #ifdef  LPU_V2_DEVICE          
-                                     u16_LightLevel = u16_WhiteRefference_LP [u32_LightLevelWhite]; 
-                  UpdateWhiteLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                 
-                  #endif
-                  #ifdef MPU_V2_DEVICE   // 20 -1919                             0- 255
-                                  //   u16_LightLevel = u16_RedRefference_MP [u32_LightLevelRed]; 
-                  UpdateWhiteLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-                  #endif
-                  #ifdef HPU_V2_DEVICE   
-                                     u16_LightLevel = u16_WhiteRefference_HP [u32_LightLevelWhite]; 
-                  UpdateWhiteLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                        
-                  #endif
-                //
-              //LL_mDelay(u8_Mode_A_StepDelay_ms); 
-                               u32_SubCounter++;
-                if ( u32_SubCounter>= u32_SubCounterLevel)
-                {
-                   u32_SubCounter = 0;
-                   u16_LightLevel -- ; //u32_LightLevelRed--; 
-                   //
-                   u32_SubCounterLevel = u8_WhiteLightRepeatFactor_MP[u16_LightLevel-WHT_OFFSET]; 
-                   //                
-                } 
-                //
-                if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-                {
-                  // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel==(WHT_OFFSET-1))  
-                     u32_Mode_Sqnt_SM = SM_MODE_RED_UP;
-                    //
-                  }
-                  //
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel==(WHT_OFFSET-1))  
-                    {
-                      u32_Mode_Sqnt_SM = SM_MODE_RED_UP;    
-                      u8_Mode_Sqnt_Status = MODE_STATUS_STOP;
-                    }
-                  }                                
-                }
-                else
-                if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-                {
-                  // КОД СТРОГО ДЛЯ РАДУГИ
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel==(WHT_OFFSET-1))   
-                     u32_Mode_Rnbw_SM = SM_MODE_RED_UP;
-                    //
-                  }
-                  //
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel==(WHT_OFFSET-1))  
-                    {
-                      u32_Mode_Rnbw_SM = SM_MODE_RED_UP;    
-                      u8_Mode_Rnbw_Status = MODE_STATUS_STOP;
-                    }
-                  }                                
-                }
-            } 
-      }      
-    }   
-    //
     if ( b_UpdateWhiteLightLevel)
     {
       b_UpdateWhiteLightLevel  = false;
@@ -721,171 +402,6 @@ void TIM2_IRQHandler(void)
     //
     if (b_TurnOffPatternActive == true)
       u16_LightLevel = BLU_OFFSET;
-    else
-    if (b_BlueLightLevelUpdated == true)
-    if (  
-          ( ( u8_StateMaschine ==  SM_MODE_SEQUENTIAL ) && (u8_Mode_Sqnt_Status == MODE_STATUS_RUN) )
-          ||
-          ( ( u8_StateMaschine ==  SM_MODE_RAINBOW    ) && (u8_Mode_Rnbw_Status == MODE_STATUS_RUN) )
-        )
-    {
-        if ( 
-              ( (u32_Mode_Sqnt_SM == SM_MODE_BLUE_UP)  && (u8_Mode_Sqnt_Status == MODE_STATUS_RUN) )   
-              || 
-              ( (u32_Mode_Rnbw_SM == SM_MODE_BLUE_UP)  && (u8_Mode_Rnbw_Status == MODE_STATUS_RUN) )
-            ) 
-        {        //
-              #ifdef  LPU_V2_DEVICE      
-                                 u16_LightLevel = u16_BlueRefference_LP [u32_LightLevelBlue]; 
-              UpdateBlueLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                  
-              #endif    
-              #ifdef MPU_V2_DEVICE   // 20..1919      // Индексы шим таблицы  0.255 
-              UpdateBlueLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-              #endif            
-              #ifdef HPU_V2_DEVICE   
-                                 u16_LightLevel = u16_BlueRefference_HP [u32_LightLevelBlue]; 
-              UpdateBlueLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                           
-              #endif
-             //
-              u32_SubCounter++;
-              if ( u32_SubCounter>= u32_SubCounterLevel)
-              {
-                u32_SubCounter = 0;
-                u16_LightLevel ++ ; // u32_LightLevelRed++; 
-                //
-                u32_SubCounterLevel = u8_BlueLightRepeatFactor_MP[u16_LightLevel-BLU_OFFSET];   
-                //
-              }
-              //
-              // И для последовательного  и для радуги поведение единообразно. 
-              // изменяются только сходные по функционалу переменные.
-              if( u8_StateMaschine ==  SM_MODE_SEQUENTIAL  ) 
-              {
-                // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                {
-                  if (u16_LightLevel>=i16_LightLevelBlue_AM-2) 
-                  {
-                    u32_Mode_Sqnt_SM = SM_MODE_BLUE_DOWN;  
-                  }
-                }
-                //
-                // Работа с синхронизацией
-                if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                {
-                  if (u16_LightLevel>=i16_LightLevelBlue_AM-2) 
-                  {
-                    u32_Mode_Sqnt_SM = SM_MODE_BLUE_DOWN; 
-                    u8_Mode_Sqnt_Status = MODE_STATUS_STOP;  
-                  }
-                }                                
-              }
-              else
-              if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-              {
-                // КОД СТРОГО ДЛЯ РАДУГИ
-                if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                {
-                  if (u16_LightLevel>=i16_LightLevelBlue_AM-2) 
-                  {
-                    u32_Mode_Rnbw_SM = SM_MODE_GREEN_DOWN; 
-                  }
-                }
-                //
-                // Работа с синхронизацией
-                if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                {
-                  if (u16_LightLevel>=i16_LightLevelBlue_AM-2) 
-                  {
-                    u32_Mode_Rnbw_SM = SM_MODE_GREEN_DOWN; 
-                    u8_Mode_Rnbw_Status = MODE_STATUS_STOP;  
-                  }
-                } 
-              }
-
-        }       
-        else
-          if ( 
-                (  (u32_Mode_Sqnt_SM == SM_MODE_BLUE_DOWN) && (u8_Mode_Sqnt_Status == MODE_STATUS_RUN) ) 
-                ||  
-                (  (u32_Mode_Rnbw_SM == SM_MODE_BLUE_DOWN) && (u8_Mode_Rnbw_Status == MODE_STATUS_RUN) )
-              )   
-          {    //
-                #ifdef  LPU_V2_DEVICE          
-                                   u16_LightLevel = u16_BlueRefference_LP [u32_LightLevelBlue]; 
-                UpdateBlueLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                 
-                #endif
-                #ifdef MPU_V2_DEVICE   // 20 -1919                             0- 255
-                                //   u16_LightLevel = u16_RedRefference_MP [u32_LightLevelRed]; 
-                UpdateBlueLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-                #endif
-                #ifdef HPU_V2_DEVICE   
-                                   u16_LightLevel = u16_BlueRefference_HP [u32_LightLevelBlue]; 
-                UpdateBlueLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                        
-                #endif
-              //
-            //LL_mDelay(u8_Mode_A_StepDelay_ms); 
-                   u32_SubCounter++;
-              if ( u32_SubCounter>= u32_SubCounterLevel)
-              {
-                 u32_SubCounter = 0;
-                 u16_LightLevel -- ; //u32_LightLevelRed--; 
-                 //
-                 u32_SubCounterLevel = u8_BlueLightRepeatFactor_MP[u16_LightLevel-BLU_OFFSET]; 
-                 //
-              } 
-              //
-              if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-              {
-                // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                // И для последовательного  и для радуги поведение единообразно. 
-                // изменяются только сходные по функционалу переменные. 
-                if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                {
-                  if (u16_LightLevel==(BLU_OFFSET-1))  
-                  {
-                    u32_Mode_Sqnt_SM = SM_MODE_UV_UP;    
-                  }
-                } 
-                //
-                // Работа с синхронизацией
-                if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                {
-                  if (u16_LightLevel==(BLU_OFFSET-1))  
-                  {
-                    u32_Mode_Sqnt_SM = SM_MODE_UV_UP;    
-                    u8_Mode_Sqnt_Status = MODE_STATUS_STOP;
-                  }
-                }                 
-              }
-              else
-              if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-              {
-                // КОД СТРОГО ДЛЯ РАДУГИ
-                if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                {
-                  if (u16_LightLevel==(BLU_OFFSET-1))  
-                  {
-                    u32_Mode_Rnbw_SM = SM_MODE_UV_UP;    
-                  }
-                } 
-                //
-                // Работа с синхронизацией
-                if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                {
-                  if (u16_LightLevel==(BLU_OFFSET-1))  
-                  {
-                    u32_Mode_Rnbw_SM = SM_MODE_UV_UP;    
-                    u8_Mode_Rnbw_Status = MODE_STATUS_STOP;
-                  }
-                }
-              }
-              
-          } 
-      
-    }
-    //   
-    //
     if ( b_UpdateBlueLightLevel)
     {
       b_UpdateBlueLightLevel  = false;
@@ -926,183 +442,6 @@ void TIM1_TRG_COM_TIM11_IRQHandler(void)
     //
     if (b_TurnOffPatternActive == true)
       u16_LightLevel = RED_OFFSET;
-    else
-    if (b_RedLightLevelUpdated == true)
-    {
-      //
-      if (
-            (  (u8_StateMaschine ==  SM_MODE_SEQUENTIAL) && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN )  )
-            ||
-            (  (u8_StateMaschine ==  SM_MODE_RAINBOW   ) && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN )  )  
-          )       
-      {
-          if ( 
-                ( ( u32_Mode_Sqnt_SM  == SM_MODE_RED_UP ) && (u8_StateMaschine ==  SM_MODE_SEQUENTIAL))
-                || 
-                ( ( u32_Mode_Rnbw_SM  == SM_MODE_RED_UP ) && (u8_StateMaschine ==  SM_MODE_RAINBOW   ) )
-              )   
-          {     
-                //
-                #ifdef  LPU_V2_DEVICE      
-                                   u16_LightLevel = u16_RedRefference_LP [u32_LightLevelRed]; 
-                UpdateRedLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                  
-                #endif    
-                #ifdef MPU_V2_DEVICE   // 20..1919      // Индексы шим таблицы  0.255 
-                UpdateRedLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-                #endif            
-                #ifdef HPU_V2_DEVICE   
-                                   u16_LightLevel = u16_RedRefference_HP [u32_LightLevelRed]; 
-                UpdateRedLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                           
-                #endif
-                //
-                // Независимо от наличия/отсутствия синхронизации
-                u32_SubCounter++;
-                if ( u32_SubCounter>= u32_SubCounterLevel)
-                {
-                  u32_SubCounter = 0;
-                  u16_LightLevel ++ ; // u32_LightLevelRed++; 
-                  //    
-                  u32_SubCounterLevel = u8_RedLightRepeatFactor_MP[u16_LightLevel-RED_OFFSET];
-                  //
-                }  
-                //
-                if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-                {
-                  // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                  // работа без синхронизации
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelRed_AM-2) 
-                     u32_Mode_Sqnt_SM = SM_MODE_RED_DOWN;  
-                  }
-                  //
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelRed_AM-2) 
-                    {
-                      u32_Mode_Sqnt_SM    = SM_MODE_RED_DOWN; // Красный в максимуме. Надо тушить.
-                      u8_Mode_Sqnt_Status = MODE_STATUS_STOP; 
-                    }
-                  } 
-                }
-                else
-                  if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-                  {
-                    // КОД СТРОГО ДЛЯ РАДУГИ
-                    // работа без синхронизации
-                    if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                    {
-                      if (u16_LightLevel>=i16_LightLevelRed_AM-2) 
-                      {
-                      //  u16_LightLevel =0; // Частный случай
-                       u32_Mode_Rnbw_SM = SM_MODE_GREEN_UP;  // Красный в максимуме. Активируем зеленый.
-                      }
-                    }
-                    //
-                    // Работа с синхронизацией
-                    if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                    {
-                      if (u16_LightLevel>=i16_LightLevelRed_AM-2) 
-                      {
-                       //  u16_LightLevel =0; // Частный случай
-                        u32_Mode_Rnbw_SM = SM_MODE_GREEN_UP; // Красный в максимуме. Активируем зеленый.
-                        u8_Mode_Rnbw_Status = MODE_STATUS_STOP; 
-                      }
-                    } 
-                  }
-
-          }       
-          else
-            if ( 
-                 ( (u32_Mode_Sqnt_SM  == SM_MODE_RED_DOWN) && ( u8_StateMaschine ==  SM_MODE_SEQUENTIAL ) ) 
-                 || 
-                 ( (u32_Mode_Rnbw_SM  == SM_MODE_RED_DOWN) && ( u8_StateMaschine ==  SM_MODE_RAINBOW    ) )  
-                )    
-            {    //
-                  #ifdef  LPU_V2_DEVICE          
-                                     u16_LightLevel = u16_RedRefference_LP [u32_LightLevelRed]; 
-                  UpdateRedLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                 
-                  #endif
-                  #ifdef MPU_V2_DEVICE   // 20 -1919                             0- 255
-                                  //   u16_LightLevel = u16_RedRefference_MP [u32_LightLevelRed]; 
-                  UpdateRedLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-                  #endif
-                  #ifdef HPU_V2_DEVICE   
-                                     u16_LightLevel = u16_RedRefference_HP [u32_LightLevelRed]; 
-                  UpdateRedLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                        
-                  #endif
-                  //
-                  //
-                  u32_SubCounter++;
-                  //
-                  if ( u32_SubCounter>= u32_SubCounterLevel)
-                  {
-                    u32_SubCounter = 0;
-                    u16_LightLevel -- ; 
-                    //
-                    u32_SubCounterLevel = u8_RedLightRepeatFactor_MP[u16_LightLevel-RED_OFFSET];
-                    //
-                  }                  
-                  //
-                  if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-                  {
-                    // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                    if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                    {
-                      if (u16_LightLevel==(RED_OFFSET-1))  // 
-                      {
-                        // u16_LightLevel =0; // Частный случай
-                         u32_Mode_Sqnt_SM = SM_MODE_GREEN_UP;                          
-                      }
-
-                    }
-                    //
-                    // Работа с синхронизацией
-                    if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                    {
-                      if (u16_LightLevel==(RED_OFFSET-1))  //  
-                      {
-                         //u16_LightLevel =0; // Частный случай
-                        u32_Mode_Sqnt_SM = SM_MODE_GREEN_UP; // Потушили красный и надо зажигать зеленый
-                        u8_Mode_Sqnt_Status = MODE_STATUS_STOP;
-                      }                   
-                    } 
-                  }
-                  else
-                  if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-                  {
-                    // КОД СТРОГО ДЛЯ РАДУГИ
-                    if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                    {
-                      if (u16_LightLevel==(RED_OFFSET-1))  // 
-                      {
-                         //u16_LightLevel =0; // Частный случай
-                        u32_Mode_Rnbw_SM = SM_MODE_BLUE_UP; // Потушили красный и надо зажигать СИНИЙ.
-                      }
-                         
-                    }
-                    //
-                    // Работа с синхронизацией
-                    if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                    {
-                      if (u16_LightLevel==(RED_OFFSET-1))  //  
-                      {
-                         //u16_LightLevel =0; // Частный случай
-                        u32_Mode_Rnbw_SM = SM_MODE_BLUE_UP; // Потушили красный и надо зажигать СИНИЙ.
-                        u8_Mode_Rnbw_Status = MODE_STATUS_STOP;
-                      }                   
-                    }
-                  }
-            } 
-      }
-      //      
-    }
-
-    
-    //    
-    // Оценка внешнего флага и применение нового значения частоты и скважности.
-    // Флаг устанавливается в void SetRedLevel(uint16_t u16_LightIndex)
     if ( b_UpdateRedLightLevel)
     {
       b_UpdateRedLightLevel  = false;
@@ -1188,6 +527,11 @@ extern uint32_t u32_SyncLostTimer_mks      ;
 //
 extern uint8_t u8_Mode_Strob_Status;
 extern uint8_t u8_Mode_Strobe_SM;
+extern uint16_t u16_StrobeRaw_RED;
+extern uint16_t u16_StrobeRaw_GREEN;
+extern uint16_t u16_StrobeRaw_BLUE;
+extern uint16_t u16_StrobeRaw_UV;
+extern uint16_t u16_StrobeRaw_WHITE;
 extern   bool  b_StopStrobMode ;
 extern uint8_t u8_StateMaschine ;
 //
@@ -1200,67 +544,44 @@ extern uint8_t u8_ManualChannel;
 void ProcessStrobeMode(void );
 void ProcessStrobeMode(void )
 {
-  static uint32_t u32_WaitCounter=0;
-  static uint32_t u32_WaitFactor = 570;//0.015/(1/38000)=570;
-  
-  //  
-  if( ( u8_Mode_Strob_Status == MODE_STATUS_RUN ) &&( u8_StateMaschine == SM_MODE_STROBOSCOPE ) ) 
+  static uint32_t u32_StrobCounter = 0;
+  static bool     b_StrobOn        = false;
+  //
+  if( ( u8_Mode_Strob_Status == MODE_STATUS_RUN ) &&
+      ( u8_StateMaschine     == SM_MODE_STROBOSCOPE ) )
   {
-    switch (u8_Mode_Strobe_SM)
+    u32_StrobCounter++;
+    //
+    if (u32_StrobCounter >= 6333)
     {
-       case SM_MODE_STROB_ON:
-        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( i16_LightLevelRed_AM   ); else
-        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( i16_LightLevelGreen_AM ); else 
-        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( i16_LightLevelBlue_AM  ); else
-        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( i16_LightLevelUv_AM    ); else       
-        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( i16_LightLevelWhite_AM );         
-        //   
-        u8_Mode_Strobe_SM = SM_MODE_STROB_WAIT_OFF;
-        u32_WaitCounter = 0 ;
-        break;
+      u32_StrobCounter = 0;
+      b_StrobOn = !b_StrobOn;
       //
-    case   SM_MODE_STROB_WAIT_OFF:
-        u32_WaitCounter ++ ;
-        if (u32_WaitCounter > u32_WaitFactor ) 
-        {
-          u8_Mode_Strobe_SM = SM_MODE_STROB_OFF ;
-        }
-         break;      
-          
-      case SM_MODE_STROB_OFF: 
-        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( 0 );  else
-        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( 0 );  else
-        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( 0 );  else
-        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( 0 );  else       
-        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( 0 );    
-        //
-        u8_Mode_Strobe_SM =  SM_MODE_STROB_ALL_DOWN ; 
-        //
-        break;       
-      //
-      case SM_MODE_STROB_ALL_DOWN:
-        SetRedLevel   (0); 
-        SetGreenLevel (0);  
-        SetBlueLevel  (0); 
-        SetUvLevel    (0);  
-        SetWhiteLevel (0); 
-        //
-        u8_Mode_Strobe_SM = SM_MODE_STROB_IDLE;
-        // 
-        break; 
-      //  
-      case SM_MODE_STROB_IDLE:
-             
-       break;   
-      //  
-      default:   
-        u8_Mode_Strobe_SM = SM_MODE_STROB_IDLE; 
-        break;//+++ 
-      //
+      if (b_StrobOn)
+      {
+        /* Use pre-computed perceptual raw indices to match Manual and Fade brightness. */
+        if ( u8_ManualChannel == MANUAL_MODE_RED   ) SetRedLevel   ( u16_StrobeRaw_RED   ); else
+        if ( u8_ManualChannel == MANUAL_MODE_GREEN ) SetGreenLevel ( u16_StrobeRaw_GREEN ); else
+        if ( u8_ManualChannel == MANUAL_MODE_BLUE  ) SetBlueLevel  ( u16_StrobeRaw_BLUE  ); else
+        if ( u8_ManualChannel == MANUAL_MODE_UV    ) SetUvLevel    ( u16_StrobeRaw_UV    ); else
+        if ( u8_ManualChannel == MANUAL_MODE_WHITE ) SetWhiteLevel ( u16_StrobeRaw_WHITE );
+      }
+      else
+      {
+        SetRedLevel   (0);
+        SetGreenLevel (0);
+        SetBlueLevel  (0);
+        SetUvLevel    (0);
+        SetWhiteLevel (0);
+      }
     }
-  } 
-}
-
+  }
+  else
+  {
+    u32_StrobCounter = 0;
+    b_StrobOn        = false;
+  }
+} 
 
 // this is a universal 76 kHz (actually - somewhere around 78 kHz) timer for processing IR and serial port
 // It is this option that allows you to clearly catch fronties and their duration
@@ -1375,162 +696,6 @@ void TIM1_UP_TIM10_IRQHandler(void)
     //
     if (b_TurnOffPatternActive == true)
       u16_LightLevel = UV_OFFSET;
-    else
-    if (b_UvLightLevelUpdated == true)
-    if (  
-          (  (u8_StateMaschine ==  SM_MODE_SEQUENTIAL )  && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN )    )
-          ||
-          (  (u8_StateMaschine ==  SM_MODE_RAINBOW    )  && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN )    )        
-       )
-    {
-        if ( 
-              ( (u32_Mode_Sqnt_SM == SM_MODE_UV_UP) && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN )  ) 
-              || 
-              ( (u32_Mode_Rnbw_SM == SM_MODE_UV_UP) && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN )  ) 
-            )   
-        {        //
-              #ifdef  LPU_V2_DEVICE      
-                                 u16_LightLevel = u16_UvRefference_LP [u32_LightLevelUv]; 
-              UpdateUvLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                  
-              #endif    
-              #ifdef MPU_V2_DEVICE   // 20..1919      // Индексы шим таблицы  0.255 
-              UpdateUvLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-              #endif            
-              #ifdef HPU_V2_DEVICE   
-                                 u16_LightLevel = u16_UvRefference_HP [u32_LightLevelUv]; 
-              UpdateUvLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                           
-              #endif
-             //
-              u32_SubCounter++;
-              if ( u32_SubCounter>= u32_SubCounterLevel)
-              {
-                u32_SubCounter = 0;
-                u16_LightLevel ++ ; // u32_LightLevelRed++; 
-                //
-                u32_SubCounterLevel = u8_UvLightRepeatFactor_MP[u16_LightLevel-UV_OFFSET];   
-                //
-
-              }
-              //
-              // для ультрафиолета  последовательный и радуга работают одинаково.
-              if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-              {
-                  // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА
-                  // без синхро
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelUv_AM-2) 
-                      u32_Mode_Sqnt_SM = SM_MODE_UV_DOWN;    
-                  }
-                  //
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelUv_AM-2) 
-                    {
-                      u32_Mode_Sqnt_SM = SM_MODE_UV_DOWN; 
-                      u8_Mode_Sqnt_Status = MODE_STATUS_STOP;  
-                    }  
-                  }                                
-              }
-              else
-              if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-              {
-                  // КОД СТРОГО ДЛЯ РАДУГИ
-                  // без синхро
-                  if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelUv_AM-2) 
-                      u32_Mode_Rnbw_SM = SM_MODE_UV_DOWN;    
-                  }
-                  //
-                  // Работа с синхронизацией
-                  if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                  {
-                    if (u16_LightLevel>=i16_LightLevelUv_AM-2) 
-                    {
-                      u32_Mode_Rnbw_SM = SM_MODE_UV_DOWN; 
-                      u8_Mode_Rnbw_Status = MODE_STATUS_STOP;  
-                    }  
-                  }  
-              }
-              //
-        }       
-        else
-          if ( 
-               ( (u32_Mode_Sqnt_SM == SM_MODE_UV_DOWN) && ( u8_Mode_Sqnt_Status == MODE_STATUS_RUN ) )
-               || 
-               ( (u32_Mode_Rnbw_SM == SM_MODE_UV_DOWN) && ( u8_Mode_Rnbw_Status == MODE_STATUS_RUN ) )
-              )   
-          {    //
-                #ifdef  LPU_V2_DEVICE          
-                                   u16_LightLevel = u16_UvRefference_LP [u32_LightLevelUv]; 
-                UpdateUvLevel_LP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                 
-                #endif
-                #ifdef MPU_V2_DEVICE   // 20 -1919                             0- 255
-                                //   u16_LightLevel = u16_RedRefference_MP [u32_LightLevelRed]; 
-                UpdateUvLevelFast_MP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                     
-                #endif
-                #ifdef HPU_V2_DEVICE   
-                                   u16_LightLevel = u16_UvRefference_HP [u32_LightLevelUv]; 
-                UpdateUvLevel_HP (u16_LightLevel); // 0 .. xxx_LEVEL_MAX_xP-1                        
-                #endif
-              //
-
-              u32_SubCounter++;
-              if ( u32_SubCounter>= u32_SubCounterLevel)
-              {
-                 u32_SubCounter = 0;
-                 u16_LightLevel -- ; //u32_LightLevelRed--; 
-                 //
-                 u32_SubCounterLevel = u8_UvLightRepeatFactor_MP[u16_LightLevel-UV_OFFSET]; 
-                 //                 
-              } 
-              //
-              // для ультрафиолета  последовательный и радуга работают одинаково.
-              if(  u8_StateMaschine ==  SM_MODE_SEQUENTIAL )
-              {
-                // КОД СТРОГО ДЛЯ ПОСЛЕДОВАТЕЛЬНОГО РЕЖИМА       
-                if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                {
-                  if (u16_LightLevel==(UV_OFFSET-1))  //  == 0    u32_LightLevelRed
-                   u32_Mode_Sqnt_SM = SM_MODE_WHITE_UP;
-                }
-                //
-                // Работа с синхронизацией
-                if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                {
-                  if (u16_LightLevel==(UV_OFFSET-1))  
-                  {
-                    u32_Mode_Sqnt_SM = SM_MODE_WHITE_UP;    
-                    u8_Mode_Sqnt_Status = MODE_STATUS_STOP;
-                  }
-                }                
-              }
-              else
-              if( u8_StateMaschine ==  SM_MODE_RAINBOW )
-              {
-                // КОД СТРОГО ДЛЯ РАДУГИ
-                if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
-                {
-                  if (u16_LightLevel==(UV_OFFSET-1))  //  == 0    u32_LightLevelRed
-                   u32_Mode_Rnbw_SM = SM_MODE_WHITE_UP;
-                }
-                //
-                // Работа с синхронизацией
-                if ( ( u8_LED3_State  == LED_3_SentSync) || ( u8_LED3_State == LED_3_RecieveSync) )
-                {
-                  if (u16_LightLevel==(UV_OFFSET-1))  
-                  {
-                    u32_Mode_Rnbw_SM = SM_MODE_WHITE_UP;    
-                    u8_Mode_Rnbw_Status = MODE_STATUS_STOP;
-                  }
-                }
-              }           
-          } 
-    }
-    //
-    //
     if ( b_UpdateUvLightLevel)
     {
       b_UpdateUvLightLevel  = false;

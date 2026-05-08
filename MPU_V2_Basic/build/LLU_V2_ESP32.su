@@ -1,0 +1,14 @@
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:308:9:CharToHex	0	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:345:6:RetriveMAC	4	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:375:6:WiFi_MAC_Error	0	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:389:10:ProcessMAC	24	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:427:9:RetrivePercData	0	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:520:6:Process_WiFi_IncomingString	32	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:262:6:WiFi_ProcessRx.part.0	4	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:262:6:WiFi_ProcessRx	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:2680:6:WiFi_ProcessTx	16	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:106:6:ProcessWiFiSerial	24	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:2787:6:WiFi_USART_Init	24	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:2849:6:WiFi_Power_Init	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:2867:6:WiFi_ENABLE_Init	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_ESP32.c:2903:6:Process_ESP32_LEDS	24	static

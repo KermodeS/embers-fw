@@ -1,0 +1,8 @@
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_BIOS.c:250:10:GetSectorSize	0	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_BIOS.c:272:6:RetriveBiosData	0	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_BIOS.c:281:6:ReadBios	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_BIOS.c:305:6:WrightBios	24	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_BIOS.c:412:6:TestBios	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_BIOS.c:424:6:RestoreBios	0	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_BIOS.c:435:6:SaveBios	0	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_BIOS.c:445:6:SysReboot	8	static

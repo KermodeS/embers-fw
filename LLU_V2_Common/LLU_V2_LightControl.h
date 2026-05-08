@@ -93,7 +93,7 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
  void Delay_uS   (uint16_t u16_Delay);
 
 // ПЕРВЫЙ ВАРИАНТ. С ПУЛЬТОМ, без платы управления
-/* 
+ 
 // Режимы работы - ручной и автоматический
 // В ручном режиме можно произвольно настраивать цвет и оттенок путем задания интенсивности 
 // по каждому каналу 
@@ -153,6 +153,11 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 //
 #define SM_MODE_STROBOSCOPE                     50
 //
+#define SM_MODE_SEQUENTIAL                     100
+#define SM_MODE_RAINBOW                        150
+#define SM_MODE_SERVICE                         80
+#define SM_MODE_SAVE_REBOOT                      5
+#define SM_MODE_POWER_UP                         0
 
 // В ручном режиме можно управлять одним из пяти каналов
 // Это что-бы определять на что воздействовать при нажатии на Ярче/тускнее и т.п.
@@ -190,9 +195,8 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 #define UPDATE_DELAY_MAX_MS    100
 //
 //
-*/
 // 
-// ВТОРОЙ ВАРИАНТ. С ПЛАТОЙ УПРАВЛЕНИЯ
+/*// ВТОРОЙ ВАРИАНТ. С ПЛАТОЙ УПРАВЛЕНИЯ
 // Включили питание
 #define SM_MODE_POWER_UP  0
 //
@@ -223,6 +227,8 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 #define SM_MODE_MANUAL     50
 // Управление в ручном режиме, через ИК ПУЛЬТ или ПУ
 // изменение состояние в ручном режиме
+*/
+/*
 #define SM_MODE_MANUAL_UNDEF   50
 #define SM_MODE_MANUAL_RED     51
 #define SM_MODE_MANUAL_GREEN   52
@@ -242,7 +248,7 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 // 
 // Радуга 
 #define SM_MODE_RAINBOW     200
-
+*/
 
  
  
@@ -262,24 +268,24 @@ __STATIC_INLINE void     BOARD_EN_Init(void);
 //
 // 
 // Стробоскоп  
-#define MANUAL_MODE_BUTTON_STROBOSCOPE   8
+//#define MANUAL_MODE_BUTTON_STROBOSCOPE   8
 // Последовательный
 #define MANUAL_MODE_BUTTON_SEQUENTIAL    9 
 // Радуга
 #define MANUAL_MODE_BUTTON_RAINBOW      10 
 //
 // Ручной
-#define MANUAL_MODE_BUTTON_MANUAL       11 
+#define MANUAL_MODE_BUTTON_MANUAL       12 
 //
 //
 // В ручном режиме можно управлять одним из пяти каналов
 // Это что-бы определять на что воздействовать при нажатии на Ярче/тускнее и т.п.
 //#define MANUAL_MODE_UNDEF 0
-#define MANUAL_MODE_RED   0
-#define MANUAL_MODE_GREEN 1
-#define MANUAL_MODE_BLUE  2
-#define MANUAL_MODE_UV    3
-#define MANUAL_MODE_WHITE 4
+//#define MANUAL_MODE_RED   0
+//#define MANUAL_MODE_GREEN 1
+//#define MANUAL_MODE_BLUE  2
+//#define MANUAL_MODE_UV    3
+//#define MANUAL_MODE_WHITE 4
 // По аналогии с макросами селекции канала управления в ручном режиме,
 // формирую макросы селекции канала в режиме управления яркостью через 
 // команды прямого управления
@@ -462,6 +468,55 @@ void ProcessWhiteButton   (void);
 #define ESP32_NET_ROLE_ECHOSLAVE  2
 #define ESP32_NET_ROLE_SLAVE      3 
 #define ESP32_NET_ROLE_UNDEF      4 
+//
+//
+// =============================================================================
+// ANIMATION STATE MACHINE — uwTick-driven fade engine (Stage 3)
+// =============================================================================
+// Replaces ISR-based animation stepping.
+// All animation for Sequential and Rainbow modes is driven from here,
+// called once per main loop iteration.
+//
+// Perceptual brightness scale: 0-1000 (matches inverse gamma table indexing).
+// Raw PWM index range: [offset .. max-1] per channel (existing tables).
+//
+// FadeChannel_t — per-channel fade parameters (runtime-settable).
+// =============================================================================
+
+typedef struct {
+    // --- Parameters (set before starting animation) ---
+    uint32_t u32_FadeDurationMs;  // ms for a full sweep (min→max or max→min)
+    uint16_t u16_BrightnessMax;   // perceptual ceiling, 0-1000
+    uint16_t u16_BrightnessMin;   // perceptual floor, 0-1000
+    // --- Internal state (do not set externally) ---
+    uint32_t u32_LastTickMs;      // uwTick at last update
+    int32_t  i32_PercX10;         // current perceptual level × 10 (0-10000)
+    uint8_t  u8_Dir;              // 1 = fading up, 0 = fading down
+    uint8_t  u8_DitherPhase;      // toggles for temporal dithering
+    uint32_t u32_SubStepAccum;    // fractional step accumulator (x1000 units)
+} FadeChannel_t;
+
+
+extern uint16_t u16_GlobalBrightMax;
+// Five channel fade parameter blocks — accessible from LightControl.c and main.c
+extern FadeChannel_t g_Fade[5]; // 0=Red 1=Green 2=Blue 3=UV 4=White
+
+// Channel index aliases for g_Fade[]
+#define FADE_CH_RED   0
+#define FADE_CH_GREEN 1
+#define FADE_CH_BLUE  2
+#define FADE_CH_UV    3
+#define FADE_CH_WHITE 4
+
+// Animation_Init — call once after channel tables are ready (after InitXxxLightArray_MP_V1)
+void Animation_Init(void);
+void UpdateStrobeRawIndices(void);
+
+// Animation_Update — call every main loop iteration.
+// Drives Sequential and Rainbow fades using uwTick.
+// Does nothing when u8_StateMaschine is not SM_MODE_SEQUENTIAL or SM_MODE_RAINBOW.
+void Animation_Update(void);
+
 //
 //
 #endif /* __LLU_V2_LIGHT_CONTROL_H */

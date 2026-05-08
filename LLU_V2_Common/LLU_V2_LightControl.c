@@ -124,11 +124,11 @@ extern uint8_t u8_LED8_State;// = LED_8_DEFAULT; // Качество синхр�
 //
 //
 // Это индексы таблицы управления. От 0 до 1920, к примеру.
-uint16_t   RED_MAX_INDEX = 0 ;
-uint16_t GREEN_MAX_INDEX = 0 ;
-uint16_t  BLUE_MAX_INDEX = 0 ;
-uint16_t    UV_MAX_INDEX = 0 ;
-uint16_t WHITE_MAX_INDEX = 0 ;
+uint16_t   RED_MAX_INDEX = 0;
+uint16_t GREEN_MAX_INDEX = 0;
+uint16_t  BLUE_MAX_INDEX = 0;
+uint16_t    UV_MAX_INDEX = 0;
+uint16_t WHITE_MAX_INDEX = 0;
 //
 //
 /* Measured duty cycle */
@@ -158,6 +158,120 @@ void Delay_uS(uint16_t u16_Delay)
      asm("nop");asm("nop");asm("nop");asm("nop");asm("nop");     
    }
 }
+//
+// =============================================================================
+// PERCEPTUAL GAMMA CORRECTION — Manual mode only (Stage 2)
+// =============================================================================
+// Applied exclusively inside DirectLightCtrl() — the manual brightness path.
+// Animation ISR paths are NOT affected; they continue using the original
+// repeat-factor tables and PWM lookup tables unchanged.
+//
+// Each channel has its own gamma table (101 entries, fixed-point x10000).
+// R/G/B/W use gamma 2.2 (standard perceptual curve for visible LEDs).
+// UV uses gamma 1.8 (more linear lux-vs-current response than visible LEDs).
+//
+// To retune a channel after hardware measurement, replace only its table.
+// Regenerate with: round((i/100)^gamma * 10000) for i in 0..100.
+// No floating point, no math.h, safe to call from any context.
+//
+// gamma=2.2  (RED)
+const uint16_t u16_GammaTable_RED[101] = {
+        0,     0,     2,     4,     8,    14,    21,    29,    39,    50,
+       63,    78,    94,   112,   132,   154,   177,   203,   230,   259,
+      290,   323,   358,   394,   433,   474,   516,   561,   608,   657,
+      707,   760,   815,   872,   932,   993,  1056,  1122,  1190,  1260,
+     1332,  1406,  1483,  1562,  1643,  1726,  1812,  1899,  1989,  2082,
+     2176,  2273,  2373,  2474,  2578,  2684,  2793,  2904,  3017,  3132,
+     3250,  3371,  3494,  3619,  3746,  3876,  4009,  4143,  4281,  4420,
+     4563,  4707,  4854,  5004,  5156,  5310,  5468,  5627,  5789,  5954,
+     6121,  6290,  6462,  6637,  6814,  6994,  7176,  7361,  7549,  7739,
+     7931,  8126,  8324,  8524,  8727,  8933,  9141,  9352,  9565,  9781,
+    10000,
+};
+// gamma=2.2  (GREEN)
+const uint16_t u16_GammaTable_GREEN[101] = {
+        0,     0,     2,     4,     8,    14,    21,    29,    39,    50,
+       63,    78,    94,   112,   132,   154,   177,   203,   230,   259,
+      290,   323,   358,   394,   433,   474,   516,   561,   608,   657,
+      707,   760,   815,   872,   932,   993,  1056,  1122,  1190,  1260,
+     1332,  1406,  1483,  1562,  1643,  1726,  1812,  1899,  1989,  2082,
+     2176,  2273,  2373,  2474,  2578,  2684,  2793,  2904,  3017,  3132,
+     3250,  3371,  3494,  3619,  3746,  3876,  4009,  4143,  4281,  4420,
+     4563,  4707,  4854,  5004,  5156,  5310,  5468,  5627,  5789,  5954,
+     6121,  6290,  6462,  6637,  6814,  6994,  7176,  7361,  7549,  7739,
+     7931,  8126,  8324,  8524,  8727,  8933,  9141,  9352,  9565,  9781,
+    10000,
+};
+// gamma=2.2  (BLUE)
+const uint16_t u16_GammaTable_BLUE[101] = {
+        0,     0,     2,     4,     8,    14,    21,    29,    39,    50,
+       63,    78,    94,   112,   132,   154,   177,   203,   230,   259,
+      290,   323,   358,   394,   433,   474,   516,   561,   608,   657,
+      707,   760,   815,   872,   932,   993,  1056,  1122,  1190,  1260,
+     1332,  1406,  1483,  1562,  1643,  1726,  1812,  1899,  1989,  2082,
+     2176,  2273,  2373,  2474,  2578,  2684,  2793,  2904,  3017,  3132,
+     3250,  3371,  3494,  3619,  3746,  3876,  4009,  4143,  4281,  4420,
+     4563,  4707,  4854,  5004,  5156,  5310,  5468,  5627,  5789,  5954,
+     6121,  6290,  6462,  6637,  6814,  6994,  7176,  7361,  7549,  7739,
+     7931,  8126,  8324,  8524,  8727,  8933,  9141,  9352,  9565,  9781,
+    10000,
+};
+// gamma=1.8  (UV — more linear lux-vs-current response than visible LEDs)
+const uint16_t u16_GammaTable_UV[101] = {
+        0,     3,     9,    18,    30,    46,    63,    83,   106,   131,
+      158,   188,   220,   254,   290,   329,   369,   412,   457,   503,
+      552,   603,   655,   710,   766,   825,   885,   947,  1011,  1077,
+     1145,  1215,  1286,  1359,  1434,  1511,  1590,  1670,  1752,  1836,
+     1922,  2009,  2098,  2189,  2281,  2376,  2472,  2569,  2668,  2769,
+     2872,  2976,  3082,  3189,  3298,  3409,  3522,  3636,  3751,  3868,
+     3987,  4108,  4230,  4353,  4478,  4605,  4733,  4863,  4995,  5128,
+     5262,  5398,  5536,  5675,  5816,  5958,  6102,  6247,  6394,  6542,
+     6692,  6843,  6996,  7151,  7306,  7464,  7622,  7783,  7945,  8108,
+     8272,  8439,  8606,  8775,  8946,  9118,  9292,  9466,  9643,  9821,
+    10000,
+};
+// gamma=2.2  (WHITE)
+const uint16_t u16_GammaTable_WHITE[101] = {
+        0,     0,     2,     4,     8,    14,    21,    29,    39,    50,
+       63,    78,    94,   112,   132,   154,   177,   203,   230,   259,
+      290,   323,   358,   394,   433,   474,   516,   561,   608,   657,
+      707,   760,   815,   872,   932,   993,  1056,  1122,  1190,  1260,
+     1332,  1406,  1483,  1562,  1643,  1726,  1812,  1899,  1989,  2082,
+     2176,  2273,  2373,  2474,  2578,  2684,  2793,  2904,  3017,  3132,
+     3250,  3371,  3494,  3619,  3746,  3876,  4009,  4143,  4281,  4420,
+     4563,  4707,  4854,  5004,  5156,  5310,  5468,  5627,  5789,  5954,
+     6121,  6290,  6462,  6637,  6814,  6994,  7176,  7361,  7549,  7739,
+     7931,  8126,  8324,  8524,  8727,  8933,  9141,  9352,  9565,  9781,
+    10000,
+};
+
+// GammaCorrectIndex — converts a linear PWM index to a perceptually uniform one.
+// u16_Index:   raw index in [u16_Offset .. u16_Max-1]
+// u16_Max:     channel table size (e.g. RED_MAX_INDEX)
+// u16_Offset:  dead-zone offset (e.g. RED_OFFSET)
+// pu16_Table:  pointer to the channel's 101-entry gamma table
+// Returns:     gamma-corrected index in the same [u16_Offset .. u16_Max-1] range.
+uint16_t GammaCorrectIndex(uint16_t u16_Index, uint16_t u16_Max,
+                                   uint16_t u16_Offset, const uint16_t* pu16_Table)
+{
+    uint32_t u32_Range, u32_Pct, u32_Corrected;
+    if (u16_Index <= u16_Offset) return u16_Offset;
+    if (u16_Index >= u16_Max)    return (uint16_t)(u16_Max - 1u);
+    u32_Range = (uint32_t)(u16_Max - u16_Offset);
+    u32_Pct   = ((uint32_t)(u16_Index - u16_Offset) * 100u) / u32_Range;
+    if (u32_Pct > 100u) u32_Pct = 100u;
+    {
+        uint32_t u32_frac = ((uint32_t)(u16_Index - u16_Offset) * 100u) % u32_Range;
+        uint32_t u32_lo   = pu16_Table[u32_Pct];
+        uint32_t u32_hi   = (u32_Pct < 100u) ? pu16_Table[u32_Pct + 1u] : 10000u;
+        u32_Corrected     = u32_lo + ((u32_hi - u32_lo) * u32_frac) / u32_Range;
+    }
+    u32_Corrected = (uint32_t)u16_Offset + (u32_Corrected * u32_Range) / 10000u;
+    if (u32_Corrected >= (uint32_t)u16_Max)   u32_Corrected = (uint32_t)(u16_Max - 1u);
+    if (u32_Corrected < (uint32_t)u16_Offset) u32_Corrected = (uint32_t)u16_Offset;
+    return (uint16_t)u32_Corrected;
+}
+// =============================================================================
 //
 //
 // На данный момент - просто счетчик количества вызовов таймера 76 кГц
@@ -238,9 +352,9 @@ uint32_t _SF  = 50;
 //
 // ??????????? uint8_t u8_SM_MODE_MANUAL_ChangeReason = SM_MODE_MANUAL_UNDEF;
 //
-uint8_t u8_ManualButton = MANUAL_MODE_BUTTON_RED ;      //MANUAL_MODE_BUTTON_UNDEF;
+uint8_t u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF ;      //MANUAL_MODE_BUTTON_UNDEF;
 //
-uint8_t u8_StateMaschine = SM_MODE_POWER_UP;//SM_MODE_STAND_BY;
+uint8_t u8_StateMaschine = SM_MODE_TURN_ON;//SM_MODE_STAND_BY;//SM_MODE_POWER_UP
 //
 uint8_t u8_ManualChannel = MANUAL_MODE_RED; //MANUAL_MODE_UNDEF;
 // В прошивке модуля функцию данной переменной выполняет  u32_ActualChannel
@@ -315,6 +429,8 @@ int16_t i16_W_10perc ;//= ( (WHITE_MAX_INDEX - WHT_OFFSET)/10);
 // Данные значения ре-инициализируются перед фактическим использование в TurnOnPattern()
 int16_t  i16_LightLevelRed_AM   = 100 ; 
 int16_t  i16_LightLevelGreen_AM = 100 ; 
+
+
 int16_t  i16_LightLevelBlue_AM  = 100 ; 
 int16_t  i16_LightLevelUv_AM    = 100 ; 
 int16_t  i16_LightLevelWhite_AM = 100 ; 
@@ -807,35 +923,28 @@ extern bool b_Restore_AM  ;
 //
 void TurnOffPattern(void)
 {
-  //
+  /* Instant off — zero all channels immediately.
+   * Previously used a gradual ramp-down (1ms per step) which blocked the main
+   * loop for up to ~300ms, causing mode button presses to be missed (T7).
+   * Side effect: no fade-out animation on mode switch. Acceptable trade-off. */
   b_TurnOffPatternActive = true;
   //
-  u32_Mode_Sqnt_SM  = SM_MODE_RED_UP ;  
-  u32_Mode_Rnbw_SM  = SM_MODE_RED_UP ; 
+  u32_Mode_Sqnt_SM  = SM_MODE_RED_UP;
+  u32_Mode_Rnbw_SM  = SM_MODE_RED_UP;
   //
-  //      
-  //  гасим  Red
-  u32_Delay_ms = 1;
-  while  (u32_LightLevelRed || u32_LightLevelGreen||u32_LightLevelBlue||u32_LightLevelUv||u32_LightLevelWhite)
-  {
-    if( u32_LightLevelRed  >11 ) u32_LightLevelRed   -= 10; else if (u32_LightLevelRed)  u32_LightLevelRed   -- ;
-    if( u32_LightLevelGreen>11 ) u32_LightLevelGreen -= 10; else if (u32_LightLevelGreen)   u32_LightLevelGreen -- ;
-    if( u32_LightLevelBlue >11 ) u32_LightLevelBlue  -= 10; else if (u32_LightLevelBlue)   u32_LightLevelBlue  -- ;
-    if( u32_LightLevelUv   >11 ) u32_LightLevelUv    -= 10; else if (u32_LightLevelUv)  u32_LightLevelUv    -- ;
-    if( u32_LightLevelWhite>11 ) u32_LightLevelWhite -= 10; else if (u32_LightLevelWhite)  u32_LightLevelWhite -- ;
-    //
-    SetRedLevel   ( u32_LightLevelRed   );
-    SetGreenLevel ( u32_LightLevelGreen );
-    SetBlueLevel  ( u32_LightLevelBlue  );
-    SetUvLevel    ( u32_LightLevelUv    );
-    SetWhiteLevel ( u32_LightLevelWhite );
-    //  
-    LL_mDelay(u32_Delay_ms); 
-    //     
-  }
+  u32_LightLevelRed   = 0;
+  u32_LightLevelGreen = 0;
+  u32_LightLevelBlue  = 0;
+  u32_LightLevelUv    = 0;
+  u32_LightLevelWhite = 0;
+  //
+  b_RedLightLevelUpdated   = true; SetRedLevel  (0);
+  b_GreenLightLevelUpdated = true; SetGreenLevel(0);
+  b_BlueLightLevelUpdated  = true; SetBlueLevel (0);
+  b_UvLightLevelUpdated    = true; SetUvLevel   (0);
+  b_WhiteLightLevelUpdated = true; SetWhiteLevel(0);
   //
   b_TurnOffPatternActive = false;
-  //
 }
 //
 void ProcessPowerUp(void)
@@ -908,101 +1017,127 @@ int32_t i32_ActualPerc[5]  = { 0, 0, 0, 0, 0};
 // Для хранения яркости до выключенного состояний использую массив хранения ActualMax
 int32_t i32_ActualPerc_AM[5]  = { 0, 0, 0, 0, 0};
 //
+/* Forward declaration — defined later in animation engine section */
+static uint16_t PerceptualToRaw(uint16_t u16_Perc, uint16_t u16_MaxIdx,
+                                 uint8_t u8_IsUV, uint16_t u16_Zone3Start);
+
+/* Pre-computed raw indices for strobe interrupt */
+uint16_t u16_StrobeRaw_RED   = 0u;
+uint16_t u16_StrobeRaw_GREEN = 0u;
+uint16_t u16_StrobeRaw_BLUE  = 0u;
+uint16_t u16_StrobeRaw_UV    = 0u;
+uint16_t u16_StrobeRaw_WHITE = 0u;
+
+/* Update strobe raw indices from current GlobalBrightMax.
+ * Call whenever u16_GlobalBrightMax changes. */
+void UpdateStrobeRawIndices(void);
+void UpdateStrobeRawIndices(void)
+{
+    u16_StrobeRaw_RED   = PerceptualToRaw(u16_GlobalBrightMax, RED_MAX_INDEX,   0u, 1230u);
+    u16_StrobeRaw_GREEN = PerceptualToRaw(u16_GlobalBrightMax, GREEN_MAX_INDEX, 0u, 1449u);
+    u16_StrobeRaw_BLUE  = PerceptualToRaw(u16_GlobalBrightMax, BLUE_MAX_INDEX,  0u, 1449u);
+    u16_StrobeRaw_UV    = PerceptualToRaw(u16_GlobalBrightMax, UV_MAX_INDEX,    1u, 1449u);
+    u16_StrobeRaw_WHITE = PerceptualToRaw(u16_GlobalBrightMax, WHITE_MAX_INDEX, 0u, 1449u);
+}
+
 void  DirectLightCtrl( int32_t i32_Channel, int32_t i32_Perc)
 {
-  static uint32_t u32_Delay_ms =1;
-  // Для выбранного канала свечения, в зависимости от заданного значения, 
-  // выполняем плавное увеличение или уменьшение яркости.
+  /* Smoothly ramp the selected channel to the target brightness level.
+   * i32_Perc is 0-100 (Manual percent scale). Converted to 0-1000 for
+   * PerceptualToRaw() so Manual uses the same gamma curve as the Fade
+   * engine — ensuring matched lux output at equivalent brightness steps.
+   * Each ramp step maps the raw index back to perceptual scale for output.
+   * IWDG kicked every step — ramp can take up to ~3s at full range. */
+  static uint32_t u32_Delay_ms = 1;
+  uint16_t u16_Perc1000 = (uint16_t)((i32_Perc < 0 ? 0 : i32_Perc > 100 ? 100 : i32_Perc) * 10);
+
   if ( i32_Channel == _ACTUAL_RED )
-  { // 
-    i16_LightLevelRed_AM = RED_OFFSET+i16_R_10perc* i32_Perc / PRCNT_SHIFT;
-    if ( i16_LightLevelRed_AM > RED_MAX_INDEX )  i16_LightLevelRed_AM = RED_MAX_INDEX-2 ;
-    if ( i16_LightLevelRed_AM <             0 )  i16_LightLevelRed_AM =               0 ;
-    //
-    if (i16_LightLevelRed_AM > u32_LightLevelRed)
-    {// Увеличение яркости
-      for (                                 ;  u32_LightLevelRed<i16_LightLevelRed_AM; u32_LightLevelRed ++ ) 
-      {      SetRedLevel (u32_LightLevelRed);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+  {
+    i16_LightLevelRed_AM = (int16_t)PerceptualToRaw(u16_Perc1000, RED_MAX_INDEX, 0u, 1230u);
+    if (i16_LightLevelRed_AM > RED_MAX_INDEX-2)   i16_LightLevelRed_AM = RED_MAX_INDEX-2;
+    if (i16_LightLevelRed_AM < 0)                 i16_LightLevelRed_AM = 0;
+    if ((uint32_t)i16_LightLevelRed_AM > u32_LightLevelRed)
+    { // Ramp up
+      for (; u32_LightLevelRed < (uint32_t)i16_LightLevelRed_AM; u32_LightLevelRed++)
+        { b_RedLightLevelUpdated=true; UpdateRedLevelFast_MP((uint16_t)u32_LightLevelRed); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
     else
-    {// Уменьшение яркости
-      for (                                 ;  u32_LightLevelRed>i16_LightLevelRed_AM; u32_LightLevelRed -- )  
-      {      SetRedLevel (u32_LightLevelRed); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+    { // Ramp down
+      for (; u32_LightLevelRed > (uint32_t)i16_LightLevelRed_AM; u32_LightLevelRed--)
+        { b_RedLightLevelUpdated=true; UpdateRedLevelFast_MP((uint16_t)u32_LightLevelRed); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
-  } 
+  }
   else
   if ( i32_Channel == _ACTUAL_GRN )
-  { // 
-    i16_LightLevelGreen_AM = i16_G_10perc* i32_Perc / PRCNT_SHIFT;
-    if ( i16_LightLevelGreen_AM > GREEN_MAX_INDEX )  i16_LightLevelGreen_AM = GREEN_MAX_INDEX-2 ;
-    if ( i16_LightLevelGreen_AM <             0 )  i16_LightLevelGreen_AM =               0 ;
-    //
-    if (i16_LightLevelGreen_AM > u32_LightLevelGreen)
-    {// Увеличение яркости
-      for (                                 ;  u32_LightLevelGreen<i16_LightLevelGreen_AM; u32_LightLevelGreen ++ ) 
-      {      SetGreenLevel (u32_LightLevelGreen);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+  {
+    i16_LightLevelGreen_AM = (int16_t)PerceptualToRaw(u16_Perc1000, GREEN_MAX_INDEX, 0u, 1449u);
+    if (i16_LightLevelGreen_AM > GREEN_MAX_INDEX-2) i16_LightLevelGreen_AM = GREEN_MAX_INDEX-2;
+    if (i16_LightLevelGreen_AM < 0)                 i16_LightLevelGreen_AM = 0;
+    if ((uint32_t)i16_LightLevelGreen_AM > u32_LightLevelGreen)
+    { // Ramp up
+      for (; u32_LightLevelGreen < (uint32_t)i16_LightLevelGreen_AM; u32_LightLevelGreen++)
+        { b_GreenLightLevelUpdated=true; UpdateGreenLevelFast_MP((uint16_t)u32_LightLevelGreen); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
     else
-    {// Уменьшение яркости
-      for (                                 ;  u32_LightLevelGreen>i16_LightLevelGreen_AM; u32_LightLevelGreen -- )  
-      {      SetGreenLevel (u32_LightLevelGreen); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+    { // Ramp down
+      for (; u32_LightLevelGreen > (uint32_t)i16_LightLevelGreen_AM; u32_LightLevelGreen--)
+        { b_GreenLightLevelUpdated=true; UpdateGreenLevelFast_MP((uint16_t)u32_LightLevelGreen); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
-  } 
+  }
   else
   if ( i32_Channel == MANUAL_MODE_BLUE )
-  { // 
-    i16_LightLevelBlue_AM = i16_R_10perc* i32_Perc / PRCNT_SHIFT;
-    if ( i16_LightLevelBlue_AM > RED_MAX_INDEX )  i16_LightLevelBlue_AM = BLUE_MAX_INDEX-2 ;
-    if ( i16_LightLevelBlue_AM <             0 )  i16_LightLevelBlue_AM =               0 ;
-    //
-    if (i16_LightLevelBlue_AM > u32_LightLevelBlue)
-    {// Увеличение яркости
-      for (                                 ;  u32_LightLevelBlue<i16_LightLevelBlue_AM; u32_LightLevelBlue ++ ) 
-      {      SetBlueLevel (u32_LightLevelBlue);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+  {
+    i16_LightLevelBlue_AM = (int16_t)PerceptualToRaw(u16_Perc1000, BLUE_MAX_INDEX, 0u, 1449u);
+    if (i16_LightLevelBlue_AM > BLUE_MAX_INDEX-2)   i16_LightLevelBlue_AM = BLUE_MAX_INDEX-2;
+    if (i16_LightLevelBlue_AM < 0)                  i16_LightLevelBlue_AM = 0;
+    if ((uint32_t)i16_LightLevelBlue_AM > u32_LightLevelBlue)
+    { // Ramp up
+      for (; u32_LightLevelBlue < (uint32_t)i16_LightLevelBlue_AM; u32_LightLevelBlue++)
+        { b_BlueLightLevelUpdated=true; UpdateBlueLevelFast_MP((uint16_t)u32_LightLevelBlue); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
     else
-    {// Уменьшение яркости
-      for (                                 ;  u32_LightLevelBlue>i16_LightLevelBlue_AM; u32_LightLevelBlue -- )  
-      {      SetBlueLevel (u32_LightLevelBlue); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+    { // Ramp down
+      for (; u32_LightLevelBlue > (uint32_t)i16_LightLevelBlue_AM; u32_LightLevelBlue--)
+        { b_BlueLightLevelUpdated=true; UpdateBlueLevelFast_MP((uint16_t)u32_LightLevelBlue); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
-  } 
+  }
   else
   if ( i32_Channel == MANUAL_MODE_UV )
-  { // 
-    i16_LightLevelUv_AM = i16_R_10perc* i32_Perc / PRCNT_SHIFT;
-    if ( i16_LightLevelUv_AM > RED_MAX_INDEX )  i16_LightLevelUv_AM = UV_MAX_INDEX-2 ;
-    if ( i16_LightLevelUv_AM <             0 )  i16_LightLevelUv_AM =               0 ;
-    //
-    if (i16_LightLevelUv_AM > u32_LightLevelUv)
-    {// Увеличение яркости
-      for (                                 ;  u32_LightLevelUv<i16_LightLevelUv_AM; u32_LightLevelUv ++ ) 
-      {      SetUvLevel (u32_LightLevelUv);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+  {
+    /* UV uses a different gamma curve (gamma 1.8 vs 2.2) — u8_IsUV=1 */
+    i16_LightLevelUv_AM = (int16_t)PerceptualToRaw(u16_Perc1000, UV_MAX_INDEX, 1u, 1449u);
+    if (i16_LightLevelUv_AM > UV_MAX_INDEX-2)       i16_LightLevelUv_AM = UV_MAX_INDEX-2;
+    if (i16_LightLevelUv_AM < 0)                    i16_LightLevelUv_AM = 0;
+    if ((uint32_t)i16_LightLevelUv_AM > u32_LightLevelUv)
+    { // Ramp up
+      for (; u32_LightLevelUv < (uint32_t)i16_LightLevelUv_AM; u32_LightLevelUv++)
+        { b_UvLightLevelUpdated=true; UpdateUvLevelFast_MP((uint16_t)u32_LightLevelUv); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
     else
-    {// Уменьшение яркости
-      for (                                 ;  u32_LightLevelUv>i16_LightLevelUv_AM; u32_LightLevelUv -- )  
-      {      SetUvLevel (u32_LightLevelUv); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+    { // Ramp down
+      for (; u32_LightLevelUv > (uint32_t)i16_LightLevelUv_AM; u32_LightLevelUv--)
+        { b_UvLightLevelUpdated=true; UpdateUvLevelFast_MP((uint16_t)u32_LightLevelUv); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
-  } 
+  }
   else
   if ( i32_Channel == MANUAL_MODE_WHITE )
-  { // 
-    i16_LightLevelWhite_AM = i16_R_10perc* i32_Perc / PRCNT_SHIFT;
-    if ( i16_LightLevelWhite_AM > RED_MAX_INDEX )  i16_LightLevelWhite_AM = WHITE_MAX_INDEX-2 ;
-    if ( i16_LightLevelWhite_AM <             0 )  i16_LightLevelWhite_AM =               0 ;
-    //
-    if (i16_LightLevelWhite_AM > u32_LightLevelWhite)
-    {// Увеличение яркости
-      for (                                 ;  u32_LightLevelWhite<i16_LightLevelWhite_AM; u32_LightLevelWhite ++ ) 
-      {      SetWhiteLevel (u32_LightLevelWhite);  LL_mDelay(u32_Delay_ms);   }   //LL_mDelay(5);       
+  {
+    /* White channel: hardware-disabled (overvoltage fault DD1/VT1).
+     * Code retained for completeness — will not drive hardware. */
+    i16_LightLevelWhite_AM = (int16_t)PerceptualToRaw(u16_Perc1000, WHITE_MAX_INDEX, 0u, 1449u);
+    if (i16_LightLevelWhite_AM > WHITE_MAX_INDEX-2) i16_LightLevelWhite_AM = WHITE_MAX_INDEX-2;
+    if (i16_LightLevelWhite_AM < 0)                 i16_LightLevelWhite_AM = 0;
+    if ((uint32_t)i16_LightLevelWhite_AM > u32_LightLevelWhite)
+    { // Ramp up
+      for (; u32_LightLevelWhite < (uint32_t)i16_LightLevelWhite_AM; u32_LightLevelWhite++)
+        { SetWhiteLevel((uint16_t)u32_LightLevelWhite); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
     else
-    {// Уменьшение яркости
-      for (                                 ;  u32_LightLevelWhite>i16_LightLevelWhite_AM; u32_LightLevelWhite -- )  
-      {      SetWhiteLevel (u32_LightLevelWhite); LL_mDelay(u32_Delay_ms);   } // LL_mDelay(5);  
+    { // Ramp down
+      for (; u32_LightLevelWhite > (uint32_t)i16_LightLevelWhite_AM; u32_LightLevelWhite--)
+        { SetWhiteLevel((uint16_t)u32_LightLevelWhite); LL_mDelay(u32_Delay_ms); IWDG->KR = 0xAAAA; }
     }
-  } 
-    
+  }
 }
 //
 //
@@ -1231,12 +1366,15 @@ void Process_Mode_Stroboscope(void)
     {
       //
       //+++ case SM_MODE_STROB_ON:
-        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( i16_LightLevelRed_AM   ); else
-        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( i16_LightLevelGreen_AM ); else 
-        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( i16_LightLevelBlue_AM  ); else
-        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( i16_LightLevelUv_AM    ); else       
-        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( i16_LightLevelWhite_AM );         
-        //    
+        // Dead code — Process_Mode_Stroboscope() returns immediately at entry.
+        // Active strobe output runs in stm32f4xx_it.c using u16_StrobeRaw_*.
+        // Updated for consistency: use pre-computed perceptual raw indices.
+        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( u16_StrobeRaw_RED   ); else
+        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( u16_StrobeRaw_GREEN ); else
+        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( u16_StrobeRaw_BLUE  ); else
+        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( u16_StrobeRaw_UV    ); else
+        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( u16_StrobeRaw_WHITE );
+        //
         LL_mDelay(u16_Mode_Strob_StepDelay_A_ms); //+++   u8_Mode_Strobe_SM = SM_MODE_STROB_OFF;   
         //
        //+++  break;
@@ -1286,12 +1424,19 @@ void Process_Mode_Stroboscope(void)
     {
       //
       case SM_MODE_STROB_ON:
-        if ( u8_ManualChannel == MANUAL_MODE_RED   )   SetRedLevel   ( i16_LightLevelRed_AM   ); else
-        if ( u8_ManualChannel == MANUAL_MODE_GREEN )   SetGreenLevel ( i16_LightLevelGreen_AM ); else 
-        if ( u8_ManualChannel == MANUAL_MODE_BLUE  )   SetBlueLevel  ( i16_LightLevelBlue_AM  ); else
-        if ( u8_ManualChannel == MANUAL_MODE_UV    )   SetUvLevel    ( i16_LightLevelUv_AM    ); else       
-        if ( u8_ManualChannel == MANUAL_MODE_WHITE )   SetWhiteLevel ( i16_LightLevelWhite_AM );         
-        //    
+        // Use PerceptualToRaw() + Update*LevelFast_MP() to match Fade/Manual path.
+        // Force flag before each call to guarantee hardware update lands.
+        if ( u8_ManualChannel == MANUAL_MODE_RED   ) { b_RedLightLevelUpdated=true;
+            UpdateRedLevelFast_MP  (PerceptualToRaw(u16_GlobalBrightMax, RED_MAX_INDEX,   0u, 1230u)); } else
+        if ( u8_ManualChannel == MANUAL_MODE_GREEN ) { b_GreenLightLevelUpdated=true;
+            UpdateGreenLevelFast_MP(PerceptualToRaw(u16_GlobalBrightMax, GREEN_MAX_INDEX, 0u, 1449u)); } else
+        if ( u8_ManualChannel == MANUAL_MODE_BLUE  ) { b_BlueLightLevelUpdated=true;
+            UpdateBlueLevelFast_MP (PerceptualToRaw(u16_GlobalBrightMax, BLUE_MAX_INDEX,  0u, 1449u)); } else
+        if ( u8_ManualChannel == MANUAL_MODE_UV    ) { b_UvLightLevelUpdated=true;
+            UpdateUvLevelFast_MP   (PerceptualToRaw(u16_GlobalBrightMax, UV_MAX_INDEX,    1u, 1449u)); } else
+        if ( u8_ManualChannel == MANUAL_MODE_WHITE ) { b_WhiteLightLevelUpdated=true;
+            UpdateWhiteLevelFast_MP(PerceptualToRaw(u16_GlobalBrightMax, WHITE_MAX_INDEX, 0u, 1449u)); }
+        //
         LL_mDelay(u16_Mode_Strob_StepDelay_A_ms);   u8_Mode_Strobe_SM = SM_MODE_STROB_OFF;   
         //
         break;
@@ -1354,19 +1499,15 @@ int16_t i16_W_10perc ;//= ( (WHITE_MAX_INDEX - WHT_OFFSET)/10);
 void RestoreActualMax (void);
 void RestoreActualMax (void)
 {
-  // Восстанавливаем амплитудные значения каждого канала
-  i16_LightLevelRed_AM   =  i32_ActualPerc_AM [_ACTUAL_RED]/ PRCNT_SHIFT * i16_R_10perc  ;     
-  i16_LightLevelGreen_AM =  i32_ActualPerc_AM [_ACTUAL_GRN]/ PRCNT_SHIFT * i16_G_10perc  ; 
-  i16_LightLevelBlue_AM  =  i32_ActualPerc_AM [_ACTUAL_BLU]/ PRCNT_SHIFT * i16_B_10perc  ; 
-  i16_LightLevelUv_AM    =  i32_ActualPerc_AM [_ACTUAL_UV ]/ PRCNT_SHIFT * i16_U_10perc  ; 
-  i16_LightLevelWhite_AM =  i32_ActualPerc_AM [_ACTUAL_WHT]/ PRCNT_SHIFT * i16_W_10perc  ;  
-  // 
-  // Корректируем максимум для случая 100%
-  if ( i32_ActualPerc_AM [_ACTUAL_RED] == 100 ) i16_LightLevelRed_AM    -= 2;
-  if ( i32_ActualPerc_AM [_ACTUAL_GRN] == 100 ) i16_LightLevelGreen_AM  -= 2;
-  if ( i32_ActualPerc_AM [_ACTUAL_BLU] == 100 ) i16_LightLevelBlue_AM   -= 2;
-  if ( i32_ActualPerc_AM [_ACTUAL_UV ] == 100 ) i16_LightLevelUv_AM     -= 2;
-  if ( i32_ActualPerc_AM [_ACTUAL_WHT] == 100 ) i16_LightLevelWhite_AM  -= 2;
+  /* Restore AM hardware indices using PerceptualToRaw() to match the Fade engine
+   * gamma curve. Replaces old linear formula (i16_G_10perc * percent / PRCNT_SHIFT)
+   * which produced different brightness than PerceptualToRaw at equivalent settings.
+   * i32_ActualPerc_AM[] is 0-100; multiply by 10 for PerceptualToRaw 0-1000 scale. */
+  i16_LightLevelRed_AM   = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_RED] * 10), RED_MAX_INDEX,   0u, 1230u);
+  i16_LightLevelGreen_AM = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_GRN] * 10), GREEN_MAX_INDEX, 0u, 1449u);
+  i16_LightLevelBlue_AM  = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_BLU] * 10), BLUE_MAX_INDEX,  0u, 1449u);
+  i16_LightLevelUv_AM    = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_UV ] * 10), UV_MAX_INDEX,    1u, 1449u);
+  i16_LightLevelWhite_AM = (int16_t)PerceptualToRaw((uint16_t)(i32_ActualPerc_AM[_ACTUAL_WHT] * 10), WHITE_MAX_INDEX, 0u, 1449u);
   //
   u32_LightLevelRed   = 0;
   u32_LightLevelGreen = 0;
@@ -1378,13 +1519,16 @@ void RestoreActualMax (void)
 void SetActualMax (void);
 void SetActualMax (void)
 {
-  // Восстанавливаем амплитудные значения каждого канала в 100%
-  
-  i32_ActualPerc_AM [_ACTUAL_RED] = 100 ;     
-  i32_ActualPerc_AM [_ACTUAL_GRN] = 100 ; 
-  i32_ActualPerc_AM [_ACTUAL_BLU] = 100 ; 
-  i32_ActualPerc_AM [_ACTUAL_UV ] = 100 ; 
-  i32_ActualPerc_AM [_ACTUAL_WHT] = 100 ; 
+    // Set amplitude values scaled to global brightness level
+  int32_t i32_Perc = (int32_t)u16_GlobalBrightMax / 10; // 0-100
+  if (i32_Perc < 10) i32_Perc = 10; // floor at 10%
+  //
+  i32_ActualPerc_AM [_ACTUAL_RED] = i32_Perc ;     
+  i32_ActualPerc_AM [_ACTUAL_GRN] = i32_Perc ; 
+  i32_ActualPerc_AM [_ACTUAL_BLU] = i32_Perc ; 
+  i32_ActualPerc_AM [_ACTUAL_UV ] = i32_Perc ; 
+  i32_ActualPerc_AM [_ACTUAL_WHT] = (i32_Perc * 40) / 100; // White at 40% of global
+ 
   // 
   RestoreActualMax ();
 }
@@ -1500,6 +1644,10 @@ void ProcessMainStateMaschine(void)
       {               u8_StateMaschine = SM_MODE_STROBOSCOPE; 
                       //
                       u32_Mode_Sqnt_SM  = SM_MODE_RED_UP;
+                      /* Sync global brightness from Manual before SetActualMax() runs */
+                      u16_GlobalBrightMax = (uint16_t)(i32_ActualPerc[u8_ManualChannel] * 10u);
+                      if (u16_GlobalBrightMax > 1000u) u16_GlobalBrightMax = 1000u;
+                      if (u16_GlobalBrightMax < 100u)  u16_GlobalBrightMax = 100u;
                       b_Restore_AM = true;
                       //
                       u8_Mode_Strob_Status= MODE_STATUS_RUN;  
@@ -1515,6 +1663,11 @@ void ProcessMainStateMaschine(void)
         //
         u8_StateMaschine     = SM_MODE_SEQUENTIAL; 
         SysTick->VAL = 8400000; // 100 мс.
+        /* Sync global brightness from Manual and set AM indices immediately */
+        u16_GlobalBrightMax = (uint16_t)(i32_ActualPerc[u8_ManualChannel] * 10u);
+        if (u16_GlobalBrightMax > 1000u) u16_GlobalBrightMax = 1000u;
+        if (u16_GlobalBrightMax < 100u)  u16_GlobalBrightMax = 100u;
+        SetActualMax();
         //
         if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
         {
@@ -1551,6 +1704,11 @@ void ProcessMainStateMaschine(void)
           //
           u8_StateMaschine     = SM_MODE_RAINBOW; 
           SysTick->VAL = 8400000; // 100 мс.
+          /* Sync global brightness from Manual and set AM indices immediately */
+          u16_GlobalBrightMax = (uint16_t)(i32_ActualPerc[u8_ManualChannel] * 10u);
+          if (u16_GlobalBrightMax > 1000u) u16_GlobalBrightMax = 1000u;
+          if (u16_GlobalBrightMax < 100u)  u16_GlobalBrightMax = 100u;
+          SetActualMax();
           //
           if ( ( u8_LED3_State  == LED_3_NoSync) || ( u8_LED3_State == LED_3_DEFAULT) )
           {
@@ -1577,10 +1735,43 @@ void ProcessMainStateMaschine(void)
            //
            u8_Mode_Strob_Status = MODE_STATUS_STOP ;
            //
-                      
+           /* Restore active channel brightness on return to Manual.
+            * i32_ActualPerc[] is the reliable source — updated on every Up/Down
+            * press in Manual mode. i32_ActualPerc_AM[] is NOT used here as it
+            * is only updated on channel button press, not brightness changes.
+            * Zero hardware counters first — animation modes drive Set*Level()
+            * directly without updating u32_LightLevel*, leaving them stale.
+            * Without zeroing, DirectLightCtrl() ramps from wrong position.
+            * White omitted: hardware-disabled (overvoltage fault DD1/VT1).   */
+           u32_LightLevelRed   = 0;
+           u32_LightLevelGreen = 0;
+           u32_LightLevelBlue  = 0;
+           u32_LightLevelUv    = 0;
+           u32_LightLevelWhite = 0;
+           /* Fast restore on mode transition — jump directly to target level.
+            * DirectLightCtrl() ramps over ~3s which blocks button processing (T7).
+            * On mode entry, instant restore is acceptable. Up/Down still uses
+            * the full smooth ramp via DirectLightCtrl(). */
+           { uint16_t u16_Target = PerceptualToRaw(
+                 (uint16_t)(i32_ActualPerc[u8_ManualChannel] * 10),
+                 (u8_ManualChannel == MANUAL_MODE_RED  ) ? RED_MAX_INDEX   :
+                 (u8_ManualChannel == MANUAL_MODE_GREEN) ? GREEN_MAX_INDEX :
+                 (u8_ManualChannel == MANUAL_MODE_BLUE ) ? BLUE_MAX_INDEX  : UV_MAX_INDEX,
+                 (u8_ManualChannel == MANUAL_MODE_UV   ) ? 1u : 0u,
+                 (u8_ManualChannel == MANUAL_MODE_RED  ) ? 1230u : 1449u);
+             if (u8_ManualChannel == MANUAL_MODE_RED  ) { u32_LightLevelRed   = u16_Target; b_RedLightLevelUpdated  =true; UpdateRedLevelFast_MP  (u16_Target); }
+             if (u8_ManualChannel == MANUAL_MODE_GREEN) { u32_LightLevelGreen = u16_Target; b_GreenLightLevelUpdated=true; UpdateGreenLevelFast_MP(u16_Target); }
+             if (u8_ManualChannel == MANUAL_MODE_BLUE ) { u32_LightLevelBlue  = u16_Target; b_BlueLightLevelUpdated =true; UpdateBlueLevelFast_MP (u16_Target); }
+             if (u8_ManualChannel == MANUAL_MODE_UV   ) { u32_LightLevelUv    = u16_Target; b_UvLightLevelUpdated   =true; UpdateUvLevelFast_MP   (u16_Target); }
+             /* Sync AM index so subsequent Up/Down ramps start from correct position */
+             i16_LightLevelRed_AM   = (u8_ManualChannel == MANUAL_MODE_RED  ) ? (int16_t)u16_Target : i16_LightLevelRed_AM;
+             i16_LightLevelGreen_AM = (u8_ManualChannel == MANUAL_MODE_GREEN) ? (int16_t)u16_Target : i16_LightLevelGreen_AM;
+             i16_LightLevelBlue_AM  = (u8_ManualChannel == MANUAL_MODE_BLUE ) ? (int16_t)u16_Target : i16_LightLevelBlue_AM;
+             i16_LightLevelUv_AM    = (u8_ManualChannel == MANUAL_MODE_UV   ) ? (int16_t)u16_Target : i16_LightLevelUv_AM;
+           }
       }
       //
-      //  ДАННОЕ ДЕЙСТВИЕ БЛОКИРУЕТ УПРАВЛЕНИЕ СТРОБОСКОПОМ В САМОМ ОБРАБОТЧИКЕ СТРОБОСКОПА
+      //  This flag blocks strobe handler from processing its own button while mode-switching
       u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
       //
   }
@@ -1605,6 +1796,54 @@ void ProcessMainStateMaschine(void)
       i8_GlobalDutyIndex    = 0;
       i32_GlobalDutyCounter = 0;
     }
+    if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_UP )
+    {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
+        i16_LightLevelRed_AM   += i16_R_10perc; if (i16_LightLevelRed_AM   > RED_MAX_INDEX)   i16_LightLevelRed_AM   = RED_MAX_INDEX-2;
+        i16_LightLevelGreen_AM += i16_G_10perc; if (i16_LightLevelGreen_AM > GREEN_MAX_INDEX) i16_LightLevelGreen_AM = GREEN_MAX_INDEX-2;
+        i16_LightLevelBlue_AM  += i16_B_10perc; if (i16_LightLevelBlue_AM  > BLUE_MAX_INDEX)  i16_LightLevelBlue_AM  = BLUE_MAX_INDEX-2;
+        i16_LightLevelUv_AM    += i16_U_10perc; if (i16_LightLevelUv_AM    > UV_MAX_INDEX)    i16_LightLevelUv_AM    = UV_MAX_INDEX-2;
+        i16_LightLevelWhite_AM += i16_W_10perc; if (i16_LightLevelWhite_AM > WHITE_MAX_INDEX) i16_LightLevelWhite_AM = WHITE_MAX_INDEX-2;
+        if (u16_GlobalBrightMax <= 950u) u16_GlobalBrightMax += 50u; else u16_GlobalBrightMax = 1000u;
+      /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
+      { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
+      { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
+        if (i32_P > 100) i32_P = 100; if (i32_P < 0) i32_P = 0;
+        i32_ActualPerc[MANUAL_MODE_RED  ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_GREEN] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
+    }
+    if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
+    {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
+        i16_LightLevelRed_AM   -= i16_R_10perc; if (i16_LightLevelRed_AM   < 1) i16_LightLevelRed_AM   = 1;
+        i16_LightLevelGreen_AM -= i16_G_10perc; if (i16_LightLevelGreen_AM < 1) i16_LightLevelGreen_AM = 1;
+        i16_LightLevelBlue_AM  -= i16_B_10perc; if (i16_LightLevelBlue_AM  < 1) i16_LightLevelBlue_AM  = 1;
+        i16_LightLevelUv_AM    -= i16_U_10perc; if (i16_LightLevelUv_AM    < 1) i16_LightLevelUv_AM    = 1;
+        i16_LightLevelWhite_AM -= i16_W_10perc; if (i16_LightLevelWhite_AM < 1) i16_LightLevelWhite_AM = 1;
+        if (u16_GlobalBrightMax > 200u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 200u;
+      /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
+      { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
+      { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
+        if (i32_P > 100) i32_P = 100; if (i32_P < 0) i32_P = 0;
+        i32_ActualPerc[MANUAL_MODE_RED  ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_GREEN] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
+    }
+
+      /* Recover any fade channels stuck at zero after rapid Down presses */
+      { uint8_t fi;
+        for (fi=0u; fi<5u; fi++) {
+            if (g_Fade[fi].i32_PercX10 > (int32_t)(u16_GlobalBrightMax * 10u))
+                g_Fade[fi].i32_PercX10 = (int32_t)(u16_GlobalBrightMax * 10u);
+            if (g_Fade[fi].i32_PercX10 <= 0 && g_Fade[fi].u8_Dir == 0u) {
+                g_Fade[fi].i32_PercX10 = 0;
+                g_Fade[fi].u8_Dir      = 1u;
+                g_Fade[fi].u32_SubStepAccum = 0u;
+            }
+        }
+      }
+    u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF; /* clear any unhandled button */
     Process_Mode_Sequential();
     return;
   } 
@@ -1646,7 +1885,7 @@ void ProcessMainStateMaschine(void)
       u8_Mode_Strobe_SM = SM_MODE_STROB_ON; 
     }
     //
-    // Коррекция канала свечения и его яркости
+    // Adjust active channel and brightness level
     if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_UP )
     {   u8_ManualButton  = MANUAL_MODE_BUTTON_UNDEF;
       //
@@ -1664,8 +1903,17 @@ void ProcessMainStateMaschine(void)
       //
       if (u8_ManualChannel == MANUAL_MODE_WHITE)
       {  i16_LightLevelWhite_AM+=i16_W_10perc; if (i16_LightLevelWhite_AM>WHITE_MAX_INDEX)  i16_LightLevelWhite_AM=WHITE_MAX_INDEX-2; }
+      if (u16_GlobalBrightMax <= 950u) u16_GlobalBrightMax += 50u; else u16_GlobalBrightMax = 1000u;
+      /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
+      { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
+      { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
+        if (i32_P > 100) i32_P = 100; if (i32_P < 0) i32_P = 0;
+        i32_ActualPerc[MANUAL_MODE_RED  ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_GREEN] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
     }
-    // Уменьшение яркости строба
+    // Decrease strobe brightness
     if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
     {   u8_ManualButton  = MANUAL_MODE_BUTTON_UNDEF;
       //
@@ -1678,10 +1926,31 @@ void ProcessMainStateMaschine(void)
       i16_LightLevelUv_AM-=i16_U_10perc;      if (i16_LightLevelUv_AM<(int16_t)1)        i16_LightLevelUv_AM=1;
       //
       i16_LightLevelWhite_AM-=i16_W_10perc;   if (i16_LightLevelWhite_AM<(int16_t)1)     i16_LightLevelWhite_AM=1;
-      // 
+      if (u16_GlobalBrightMax > 200u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 200u;
+      /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
+      { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
+      { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
+        if (i32_P > 100) i32_P = 100; if (i32_P < 0) i32_P = 0;
+        i32_ActualPerc[MANUAL_MODE_RED  ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_GREEN] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
+      /* Clamp all fade channels to new ceiling and recover any stuck-dark channels.
+       * Rapid Down presses can force i32_PercX10 to zero with Dir=down, leaving
+       * channels permanently silenced. Reset Dir to UP to rejoin the animation. */
+      { uint8_t fi;
+        for (fi=0u; fi<5u; fi++) {
+            if (g_Fade[fi].i32_PercX10 > (int32_t)(u16_GlobalBrightMax * 10u))
+                g_Fade[fi].i32_PercX10 = (int32_t)(u16_GlobalBrightMax * 10u);
+            if (g_Fade[fi].i32_PercX10 <= 0 && g_Fade[fi].u8_Dir == 0u) {
+                g_Fade[fi].i32_PercX10 = 0;
+                g_Fade[fi].u8_Dir      = 1u;
+            }
+        }
+      }
     }
-    //   
-    // Изменение канала строба
+    //
+    // Change strobe/animation channel
     if (u8_ManualButton == MANUAL_MODE_BUTTON_RED )
     {   u8_ManualButton  = MANUAL_MODE_BUTTON_UNDEF;   u8_ManualChannel = MANUAL_MODE_RED ;     }  
     //
@@ -1720,15 +1989,61 @@ void ProcessMainStateMaschine(void)
    // РЕЖИМ 3. ПООЧЕРЕДНОЕ ПЛАВНОЕ.
   else*/
   // РЕЖИМ 4. РАДУГА.
-  if (  u8_StateMaschine ==  SM_MODE_RAINBOW     ) // 200
+  if (  u8_StateMaschine ==  SM_MODE_RAINBOW     )
   {
     if ( b_Restore_AM )
     {
       b_Restore_AM = false ;
-      //
-      SetActualMax (); //RestoreActualMax();
-      //    
+      SetActualMax ();
     }
+    if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_UP )
+    {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
+        i16_LightLevelRed_AM   += i16_R_10perc; if (i16_LightLevelRed_AM   > RED_MAX_INDEX)   i16_LightLevelRed_AM   = RED_MAX_INDEX-2;
+        i16_LightLevelGreen_AM += i16_G_10perc; if (i16_LightLevelGreen_AM > GREEN_MAX_INDEX) i16_LightLevelGreen_AM = GREEN_MAX_INDEX-2;
+        i16_LightLevelBlue_AM  += i16_B_10perc; if (i16_LightLevelBlue_AM  > BLUE_MAX_INDEX)  i16_LightLevelBlue_AM  = BLUE_MAX_INDEX-2;
+        i16_LightLevelUv_AM    += i16_U_10perc; if (i16_LightLevelUv_AM    > UV_MAX_INDEX)    i16_LightLevelUv_AM    = UV_MAX_INDEX-2;
+        i16_LightLevelWhite_AM += i16_W_10perc; if (i16_LightLevelWhite_AM > WHITE_MAX_INDEX) i16_LightLevelWhite_AM = WHITE_MAX_INDEX-2;
+        if (u16_GlobalBrightMax <= 950u) u16_GlobalBrightMax += 50u; else u16_GlobalBrightMax = 1000u;
+      /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
+      { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
+      { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
+        if (i32_P > 100) i32_P = 100; if (i32_P < 0) i32_P = 0;
+        i32_ActualPerc[MANUAL_MODE_RED  ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_GREEN] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
+    }
+    if( u8_ManualButton == MANUAL_MODE_BUTTON_LIGHT_DOWN )
+    {   u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF;
+        i16_LightLevelRed_AM   -= i16_R_10perc; if (i16_LightLevelRed_AM   < 1) i16_LightLevelRed_AM   = 1;
+        i16_LightLevelGreen_AM -= i16_G_10perc; if (i16_LightLevelGreen_AM < 1) i16_LightLevelGreen_AM = 1;
+        i16_LightLevelBlue_AM  -= i16_B_10perc; if (i16_LightLevelBlue_AM  < 1) i16_LightLevelBlue_AM  = 1;
+        i16_LightLevelUv_AM    -= i16_U_10perc; if (i16_LightLevelUv_AM    < 1) i16_LightLevelUv_AM    = 1;
+        i16_LightLevelWhite_AM -= i16_W_10perc; if (i16_LightLevelWhite_AM < 1) i16_LightLevelWhite_AM = 1;
+        if (u16_GlobalBrightMax > 200u) u16_GlobalBrightMax -= 50u; else u16_GlobalBrightMax = 200u;
+      /* Sync i32_ActualPerc[] so Manual mode inherits animation brightness */
+      { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
+      { int32_t i32_P = (int32_t)u16_GlobalBrightMax / 10;
+        if (i32_P > 100) i32_P = 100; if (i32_P < 0) i32_P = 0;
+        i32_ActualPerc[MANUAL_MODE_RED  ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_GREEN] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_BLUE ] = i32_P;
+        i32_ActualPerc[MANUAL_MODE_UV   ] = i32_P; }
+    }
+
+      /* Recover any fade channels stuck at zero after rapid Down presses */
+      { uint8_t fi;
+        for (fi=0u; fi<5u; fi++) {
+            if (g_Fade[fi].i32_PercX10 > (int32_t)(u16_GlobalBrightMax * 10u))
+                g_Fade[fi].i32_PercX10 = (int32_t)(u16_GlobalBrightMax * 10u);
+            if (g_Fade[fi].i32_PercX10 <= 0 && g_Fade[fi].u8_Dir == 0u) {
+                g_Fade[fi].i32_PercX10 = 0;
+                g_Fade[fi].u8_Dir      = 1u;
+                g_Fade[fi].u32_SubStepAccum = 0u;
+            }
+        }
+      }
+    u8_ManualButton = MANUAL_MODE_BUTTON_UNDEF; /* clear any unhandled button */
   }    
   //
   // ВТОРОЙ ВАРИАНТ, 
@@ -1763,6 +2078,11 @@ void ProcessMainStateMaschine(void)
       i32_ActualPerc[u32_ActualChannel] += PRCNT_SHIFT;
       if (i32_ActualPerc[u32_ActualChannel] > 100) 
           i32_ActualPerc[u32_ActualChannel] = 100;
+      /* Sync global brightness so animation modes inherit Manual level.
+       * Set directly from i32_ActualPerc to keep in lockstep. */
+      u16_GlobalBrightMax = (uint16_t)(i32_ActualPerc[u32_ActualChannel] * 10u);
+      if (u16_GlobalBrightMax > 1000u) u16_GlobalBrightMax = 1000u;
+      { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
       //
       if ( b_Grouped  ) 
       {
@@ -1784,6 +2104,12 @@ void ProcessMainStateMaschine(void)
       i32_ActualPerc[u32_ActualChannel] -= PRCNT_SHIFT;
       if (i32_ActualPerc[u32_ActualChannel] < 0) 
           i32_ActualPerc[u32_ActualChannel] = 0;
+      /* Sync global brightness so animation modes inherit Manual level.
+       * Set directly from i32_ActualPerc to keep in lockstep. */
+      u16_GlobalBrightMax = (uint16_t)(i32_ActualPerc[u32_ActualChannel] * 10u);
+      /* Allow zero in Manual (LED fully off) but floor animations at 200 when active */
+      if (u16_GlobalBrightMax > 0u && u16_GlobalBrightMax < 200u) u16_GlobalBrightMax = 200u;
+      { uint8_t fi; for (fi=0u; fi<5u; fi++) g_Fade[fi].u16_BrightnessMax = u16_GlobalBrightMax; } UpdateStrobeRawIndices();
       //
       if ( b_Grouped  ) 
       {
@@ -2579,6 +2905,577 @@ void Timer1CaptureCompare_Callback(void)
   uw_TIM1_MeasuredDutyCycle = (LL_TIM_GetCounter(TIM1) * 100) / ( LL_TIM_GetAutoReload(TIM1) + 1 );
 }
 
+
+
+// =============================================================================
+// ANIMATION STATE MACHINE — uwTick-driven fade engine (Stage 3)
+// Replaces ISR-based animation stepping for Sequential and Rainbow modes.
+// =============================================================================
+//
+// Inverse gamma tables: perceptual index 0-1000 -> linear fraction 0-1000.
+// Apply at output: rawIndex = offset + (fraction * (max-offset)) / 1000.
+// R/G/B/W: inverse of gamma 2.2.   UV: inverse of gamma 1.8.
+// Generated: round(pow(i/1000.0, 1.0/gamma)*1000) for i in 0..1000.
+//
+static const uint16_t u16_InvGamma_RGBW[1001] = {
+        0,    43,    59,    71,    81,    90,    98,   105,   111,   118,
+      123,   129,   134,   139,   144,   148,   153,   157,   161,   165,
+      169,   173,   176,   180,   184,   187,   190,   194,   197,   200,
+      203,   206,   209,   212,   215,   218,   221,   223,   226,   229,
+      232,   234,   237,   239,   242,   244,   247,   249,   252,   254,
+      256,   259,   261,   263,   265,   268,   270,   272,   274,   276,
+      278,   280,   283,   285,   287,   289,   291,   293,   295,   297,
+      299,   301,   302,   304,   306,   308,   310,   312,   314,   315,
+      317,   319,   321,   323,   324,   326,   328,   330,   331,   333,
+      335,   336,   338,   340,   341,   343,   345,   346,   348,   350,
+      351,   353,   354,   356,   357,   359,   361,   362,   364,   365,
+      367,   368,   370,   371,   373,   374,   376,   377,   379,   380,
+      381,   383,   384,   386,   387,   389,   390,   391,   393,   394,
+      396,   397,   398,   400,   401,   402,   404,   405,   406,   408,
+      409,   410,   412,   413,   414,   416,   417,   418,   420,   421,
+      422,   423,   425,   426,   427,   429,   430,   431,   432,   434,
+      435,   436,   437,   438,   440,   441,   442,   443,   444,   446,
+      447,   448,   449,   450,   452,   453,   454,   455,   456,   457,
+      459,   460,   461,   462,   463,   464,   466,   467,   468,   469,
+      470,   471,   472,   473,   475,   476,   477,   478,   479,   480,
+      481,   482,   483,   484,   486,   487,   488,   489,   490,   491,
+      492,   493,   494,   495,   496,   497,   498,   499,   500,   501,
+      502,   503,   505,   506,   507,   508,   509,   510,   511,   512,
+      513,   514,   515,   516,   517,   518,   519,   520,   521,   522,
+      523,   524,   525,   526,   527,   528,   529,   530,   531,   532,
+      533,   533,   534,   535,   536,   537,   538,   539,   540,   541,
+      542,   543,   544,   545,   546,   547,   548,   549,   550,   551,
+      551,   552,   553,   554,   555,   556,   557,   558,   559,   560,
+      561,   562,   562,   563,   564,   565,   566,   567,   568,   569,
+      570,   571,   571,   572,   573,   574,   575,   576,   577,   578,
+      579,   579,   580,   581,   582,   583,   584,   585,   585,   586,
+      587,   588,   589,   590,   591,   592,   592,   593,   594,   595,
+      596,   597,   597,   598,   599,   600,   601,   602,   602,   603,
+      604,   605,   606,   607,   607,   608,   609,   610,   611,   612,
+      612,   613,   614,   615,   616,   616,   617,   618,   619,   620,
+      621,   621,   622,   623,   624,   625,   625,   626,   627,   628,
+      629,   629,   630,   631,   632,   632,   633,   634,   635,   636,
+      636,   637,   638,   639,   640,   640,   641,   642,   643,   643,
+      644,   645,   646,   646,   647,   648,   649,   650,   650,   651,
+      652,   653,   653,   654,   655,   656,   656,   657,   658,   659,
+      659,   660,   661,   662,   662,   663,   664,   665,   665,   666,
+      667,   668,   668,   669,   670,   670,   671,   672,   673,   673,
+      674,   675,   676,   676,   677,   678,   678,   679,   680,   681,
+      681,   682,   683,   684,   684,   685,   686,   686,   687,   688,
+      689,   689,   690,   691,   691,   692,   693,   694,   694,   695,
+      696,   696,   697,   698,   698,   699,   700,   701,   701,   702,
+      703,   703,   704,   705,   705,   706,   707,   707,   708,   709,
+      710,   710,   711,   712,   712,   713,   714,   714,   715,   716,
+      716,   717,   718,   718,   719,   720,   720,   721,   722,   722,
+      723,   724,   724,   725,   726,   726,   727,   728,   728,   729,
+      730,   730,   731,   732,   732,   733,   734,   734,   735,   736,
+      736,   737,   738,   738,   739,   740,   740,   741,   742,   742,
+      743,   744,   744,   745,   745,   746,   747,   747,   748,   749,
+      749,   750,   751,   751,   752,   753,   753,   754,   754,   755,
+      756,   756,   757,   758,   758,   759,   760,   760,   761,   761,
+      762,   763,   763,   764,   765,   765,   766,   766,   767,   768,
+      768,   769,   770,   770,   771,   771,   772,   773,   773,   774,
+      775,   775,   776,   776,   777,   778,   778,   779,   779,   780,
+      781,   781,   782,   783,   783,   784,   784,   785,   786,   786,
+      787,   787,   788,   789,   789,   790,   790,   791,   792,   792,
+      793,   793,   794,   795,   795,   796,   796,   797,   798,   798,
+      799,   799,   800,   801,   801,   802,   802,   803,   804,   804,
+      805,   805,   806,   806,   807,   808,   808,   809,   809,   810,
+      811,   811,   812,   812,   813,   813,   814,   815,   815,   816,
+      816,   817,   818,   818,   819,   819,   820,   820,   821,   822,
+      822,   823,   823,   824,   824,   825,   826,   826,   827,   827,
+      828,   828,   829,   830,   830,   831,   831,   832,   832,   833,
+      834,   834,   835,   835,   836,   836,   837,   838,   838,   839,
+      839,   840,   840,   841,   841,   842,   843,   843,   844,   844,
+      845,   845,   846,   846,   847,   848,   848,   849,   849,   850,
+      850,   851,   851,   852,   853,   853,   854,   854,   855,   855,
+      856,   856,   857,   857,   858,   859,   859,   860,   860,   861,
+      861,   862,   862,   863,   863,   864,   865,   865,   866,   866,
+      867,   867,   868,   868,   869,   869,   870,   870,   871,   872,
+      872,   873,   873,   874,   874,   875,   875,   876,   876,   877,
+      877,   878,   878,   879,   880,   880,   881,   881,   882,   882,
+      883,   883,   884,   884,   885,   885,   886,   886,   887,   887,
+      888,   889,   889,   890,   890,   891,   891,   892,   892,   893,
+      893,   894,   894,   895,   895,   896,   896,   897,   897,   898,
+      898,   899,   899,   900,   900,   901,   901,   902,   903,   903,
+      904,   904,   905,   905,   906,   906,   907,   907,   908,   908,
+      909,   909,   910,   910,   911,   911,   912,   912,   913,   913,
+      914,   914,   915,   915,   916,   916,   917,   917,   918,   918,
+      919,   919,   920,   920,   921,   921,   922,   922,   923,   923,
+      924,   924,   925,   925,   926,   926,   927,   927,   928,   928,
+      929,   929,   930,   930,   931,   931,   932,   932,   933,   933,
+      934,   934,   935,   935,   936,   936,   937,   937,   938,   938,
+      939,   939,   940,   940,   941,   941,   942,   942,   943,   943,
+      944,   944,   945,   945,   945,   946,   946,   947,   947,   948,
+      948,   949,   949,   950,   950,   951,   951,   952,   952,   953,
+      953,   954,   954,   955,   955,   956,   956,   957,   957,   958,
+      958,   959,   959,   959,   960,   960,   961,   961,   962,   962,
+      963,   963,   964,   964,   965,   965,   966,   966,   967,   967,
+      968,   968,   968,   969,   969,   970,   970,   971,   971,   972,
+      972,   973,   973,   974,   974,   975,   975,   976,   976,   976,
+      977,   977,   978,   978,   979,   979,   980,   980,   981,   981,
+      982,   982,   983,   983,   983,   984,   984,   985,   985,   986,
+      986,   987,   987,   988,   988,   989,   989,   989,   990,   990,
+      991,   991,   992,   992,   993,   993,   994,   994,   995,   995,
+      995,   996,   996,   997,   997,   998,   998,   999,   999,  1000,
+     1000
+};
+
+static const uint16_t u16_InvGamma_UV[1001] = {
+        0,    22,    32,    40,    47,    53,    58,    64,    68,    73,
+       77,    82,    86,    90,    93,    97,   101,   104,   107,   111,
+      114,   117,   120,   123,   126,   129,   132,   134,   137,   140,
+      143,   145,   148,   150,   153,   155,   158,   160,   163,   165,
+      167,   170,   172,   174,   176,   179,   181,   183,   185,   187,
+      189,   191,   193,   196,   198,   200,   202,   204,   206,   208,
+      210,   211,   213,   215,   217,   219,   221,   223,   225,   226,
+      228,   230,   232,   234,   235,   237,   239,   241,   242,   244,
+      246,   248,   249,   251,   253,   254,   256,   258,   259,   261,
+      262,   264,   266,   267,   269,   270,   272,   274,   275,   277,
+      278,   280,   281,   283,   284,   286,   287,   289,   290,   292,
+      293,   295,   296,   298,   299,   301,   302,   304,   305,   306,
+      308,   309,   311,   312,   314,   315,   316,   318,   319,   321,
+      322,   323,   325,   326,   327,   329,   330,   331,   333,   334,
+      335,   337,   338,   339,   341,   342,   343,   345,   346,   347,
+      349,   350,   351,   352,   354,   355,   356,   358,   359,   360,
+      361,   363,   364,   365,   366,   368,   369,   370,   371,   372,
+      374,   375,   376,   377,   379,   380,   381,   382,   383,   385,
+      386,   387,   388,   389,   390,   392,   393,   394,   395,   396,
+      397,   399,   400,   401,   402,   403,   404,   406,   407,   408,
+      409,   410,   411,   412,   413,   415,   416,   417,   418,   419,
+      420,   421,   422,   424,   425,   426,   427,   428,   429,   430,
+      431,   432,   433,   434,   436,   437,   438,   439,   440,   441,
+      442,   443,   444,   445,   446,   447,   448,   449,   450,   452,
+      453,   454,   455,   456,   457,   458,   459,   460,   461,   462,
+      463,   464,   465,   466,   467,   468,   469,   470,   471,   472,
+      473,   474,   475,   476,   477,   478,   479,   480,   481,   482,
+      483,   484,   485,   486,   487,   488,   489,   490,   491,   492,
+      493,   494,   495,   496,   497,   498,   499,   500,   501,   502,
+      503,   504,   505,   506,   507,   508,   508,   509,   510,   511,
+      512,   513,   514,   515,   516,   517,   518,   519,   520,   521,
+      522,   523,   524,   525,   525,   526,   527,   528,   529,   530,
+      531,   532,   533,   534,   535,   536,   536,   537,   538,   539,
+      540,   541,   542,   543,   544,   545,   546,   546,   547,   548,
+      549,   550,   551,   552,   553,   554,   555,   555,   556,   557,
+      558,   559,   560,   561,   562,   563,   563,   564,   565,   566,
+      567,   568,   569,   570,   570,   571,   572,   573,   574,   575,
+      576,   576,   577,   578,   579,   580,   581,   582,   582,   583,
+      584,   585,   586,   587,   588,   588,   589,   590,   591,   592,
+      593,   594,   594,   595,   596,   597,   598,   599,   599,   600,
+      601,   602,   603,   604,   604,   605,   606,   607,   608,   609,
+      609,   610,   611,   612,   613,   613,   614,   615,   616,   617,
+      618,   618,   619,   620,   621,   622,   622,   623,   624,   625,
+      626,   627,   627,   628,   629,   630,   631,   631,   632,   633,
+      634,   635,   635,   636,   637,   638,   639,   639,   640,   641,
+      642,   643,   643,   644,   645,   646,   646,   647,   648,   649,
+      650,   650,   651,   652,   653,   654,   654,   655,   656,   657,
+      657,   658,   659,   660,   661,   661,   662,   663,   664,   664,
+      665,   666,   667,   667,   668,   669,   670,   671,   671,   672,
+      673,   674,   674,   675,   676,   677,   677,   678,   679,   680,
+      680,   681,   682,   683,   683,   684,   685,   686,   686,   687,
+      688,   689,   689,   690,   691,   692,   692,   693,   694,   695,
+      695,   696,   697,   698,   698,   699,   700,   701,   701,   702,
+      703,   704,   704,   705,   706,   706,   707,   708,   709,   709,
+      710,   711,   712,   712,   713,   714,   714,   715,   716,   717,
+      717,   718,   719,   720,   720,   721,   722,   722,   723,   724,
+      725,   725,   726,   727,   727,   728,   729,   730,   730,   731,
+      732,   732,   733,   734,   735,   735,   736,   737,   737,   738,
+      739,   740,   740,   741,   742,   742,   743,   744,   745,   745,
+      746,   747,   747,   748,   749,   749,   750,   751,   752,   752,
+      753,   754,   754,   755,   756,   756,   757,   758,   758,   759,
+      760,   761,   761,   762,   763,   763,   764,   765,   765,   766,
+      767,   767,   768,   769,   770,   770,   771,   772,   772,   773,
+      774,   774,   775,   776,   776,   777,   778,   778,   779,   780,
+      780,   781,   782,   782,   783,   784,   784,   785,   786,   786,
+      787,   788,   789,   789,   790,   791,   791,   792,   793,   793,
+      794,   795,   795,   796,   797,   797,   798,   799,   799,   800,
+      801,   801,   802,   803,   803,   804,   804,   805,   806,   806,
+      807,   808,   808,   809,   810,   810,   811,   812,   812,   813,
+      814,   814,   815,   816,   816,   817,   818,   818,   819,   820,
+      820,   821,   822,   822,   823,   823,   824,   825,   825,   826,
+      827,   827,   828,   829,   829,   830,   831,   831,   832,   833,
+      833,   834,   834,   835,   836,   836,   837,   838,   838,   839,
+      840,   840,   841,   842,   842,   843,   843,   844,   845,   845,
+      846,   847,   847,   848,   848,   849,   850,   850,   851,   852,
+      852,   853,   854,   854,   855,   855,   856,   857,   857,   858,
+      859,   859,   860,   860,   861,   862,   862,   863,   864,   864,
+      865,   865,   866,   867,   867,   868,   869,   869,   870,   870,
+      871,   872,   872,   873,   874,   874,   875,   875,   876,   877,
+      877,   878,   878,   879,   880,   880,   881,   882,   882,   883,
+      883,   884,   885,   885,   886,   886,   887,   888,   888,   889,
+      890,   890,   891,   891,   892,   893,   893,   894,   894,   895,
+      896,   896,   897,   897,   898,   899,   899,   900,   900,   901,
+      902,   902,   903,   903,   904,   905,   905,   906,   906,   907,
+      908,   908,   909,   909,   910,   911,   911,   912,   912,   913,
+      914,   914,   915,   915,   916,   917,   917,   918,   918,   919,
+      920,   920,   921,   921,   922,   923,   923,   924,   924,   925,
+      926,   926,   927,   927,   928,   929,   929,   930,   930,   931,
+      931,   932,   933,   933,   934,   934,   935,   936,   936,   937,
+      937,   938,   938,   939,   940,   940,   941,   941,   942,   943,
+      943,   944,   944,   945,   945,   946,   947,   947,   948,   948,
+      949,   950,   950,   951,   951,   952,   952,   953,   954,   954,
+      955,   955,   956,   956,   957,   958,   958,   959,   959,   960,
+      960,   961,   962,   962,   963,   963,   964,   964,   965,   966,
+      966,   967,   967,   968,   968,   969,   970,   970,   971,   971,
+      972,   972,   973,   974,   974,   975,   975,   976,   976,   977,
+      978,   978,   979,   979,   980,   980,   981,   982,   982,   983,
+      983,   984,   984,   985,   985,   986,   987,   987,   988,   988,
+      989,   989,   990,   991,   991,   992,   992,   993,   993,   994,
+      994,   995,   996,   996,   997,   997,   998,   998,   999,   999,
+     1000
+};
+
+//
+// g_Fade[5] — per-channel fade parameter blocks (0=R 1=G 2=B 3=UV 4=W)
+FadeChannel_t g_Fade[5];
+/* Debug: captured at Fade peak for Green channel */
+volatile uint16_t dbg_fade_brightnessmax = 0;
+volatile int32_t  dbg_fade_percx10_peak  = 0;
+volatile uint16_t dbg_fade_raw_out       = 0;
+volatile uint16_t dbg_globbrightmax      = 0;
+uint16_t u16_GlobalBrightMax = 1000u;  // 0-1000, global animation brightness ceiling
+
+// Default animation parameters
+#define ANIM_DEFAULT_DURATION_MS  4000u
+#define ANIM_DEFAULT_MAX          1000u
+
+//
+// Externs needed by the animation engine
+//
+extern uint32_t u32_ST_captureActual;
+//
+// Forward declarations for UpdateXxxLevelFast_MP (defined in main.c)
+#ifdef MPU_V2_DEVICE
+void UpdateRedLevelFast_MP  (uint16_t);
+void UpdateGreenLevelFast_MP(uint16_t);
+void UpdateBlueLevelFast_MP (uint16_t);
+void UpdateUvLevelFast_MP   (uint16_t);
+void UpdateWhiteLevelFast_MP(uint16_t);
+#endif
+//
+// PerceptualToRaw — maps perceptual 0-1000 to raw PWM table index [offset..max-1].
+// u8_IsUV: 1 = use UV gamma-1.8 table, 0 = use RGBW gamma-2.2 table.
+
+#define PERC_ZERO_THRESH 8u
+
+static uint16_t PerceptualToRaw(uint16_t u16_Perc,
+                                 uint16_t u16_MaxIdx,
+                                 uint8_t  u8_IsUV,
+                                 uint16_t u16_Zone3Start)
+{
+    uint32_t u32_Frac, u32_Range, u32_Raw;
+    if (u16_Perc < PERC_ZERO_THRESH) return 0u;
+    if (u16_Perc >= 1000u)           return (uint16_t)(u16_MaxIdx - 1u);
+    u32_Frac  = u8_IsUV ? (uint32_t)u16_InvGamma_UV[u16_Perc]
+                        : (uint32_t)u16_InvGamma_RGBW[u16_Perc];
+    // Map perceptual 0-1000 across the full raw range
+    u32_Range = (uint32_t)(u16_MaxIdx - 20u);
+    u32_Raw   = 20u + (u32_Frac * u32_Range) / 1000u;
+    if (u32_Raw >= (uint32_t)u16_MaxIdx) u32_Raw = (uint32_t)(u16_MaxIdx - 1u);
+    return (uint16_t)u32_Raw;
+}
+
+// OutputChannel — compute dithered raw index and call UpdateXxxLevelFast_MP.
+// u16_Perc:  perceptual level 0-1000.
+// u8_Frac10: sub-step residue 0-9 (i32_PercX10 % 10); used for dither decision.
+
+static void OutputChannel(uint8_t u8_Ch, uint16_t u16_Perc, uint8_t u8_Frac10)
+{
+    uint16_t u16_MaxIdx = 0;
+    uint16_t u16_Zone3Start = 0;
+    uint8_t  u8_IsUV = 0u;
+    uint16_t u16_RawLo, u16_Out;
+
+#ifdef MPU_V2_DEVICE
+    switch (u8_Ch) {
+        case FADE_CH_RED:
+            u16_MaxIdx = RED_MAX_INDEX;   u16_Zone3Start = 1230u; break;
+        case FADE_CH_GREEN:
+            u16_MaxIdx = GREEN_MAX_INDEX; u16_Zone3Start = 1449u; break;
+        case FADE_CH_BLUE:
+            u16_MaxIdx = BLUE_MAX_INDEX;  u16_Zone3Start = 1449u; break;
+        case FADE_CH_UV:
+            u16_MaxIdx = UV_MAX_INDEX;    u16_Zone3Start = 1449u;
+            u8_IsUV = 1u;                 break;
+        case FADE_CH_WHITE:
+            u16_MaxIdx = WHITE_MAX_INDEX; u16_Zone3Start = 1449u; break;
+        default: return;
+    }
+    if (u16_MaxIdx == 0u) return;
+
+    u16_RawLo = PerceptualToRaw(u16_Perc, u16_MaxIdx, u8_IsUV, u16_Zone3Start);
+
+    if ((u8_Frac10 >= 5u) && (u16_RawLo < (uint16_t)(u16_MaxIdx - 1u)))
+    {
+        u16_Out = (g_Fade[u8_Ch].u8_DitherPhase & 1u)
+                  ? (uint16_t)(u16_RawLo + 1u) : u16_RawLo;
+    }
+    else
+    {
+        u16_Out = u16_RawLo;
+    }
+    g_Fade[u8_Ch].u8_DitherPhase++;
+
+    /* Brightness ceiling is already encoded in u16_BrightnessMax which feeds
+     * PerceptualToRaw() via StepChannel(). No second scaling needed here.
+     * Removed: u16_Out * u16_GlobalBrightMax / 1000 caused double-dimming. */
+
+    switch (u8_Ch) {
+        case FADE_CH_RED:   UpdateRedLevelFast_MP  (u16_Out); break;
+        case FADE_CH_GREEN: UpdateGreenLevelFast_MP(u16_Out); break;
+        case FADE_CH_BLUE:  UpdateBlueLevelFast_MP (u16_Out); break;
+        case FADE_CH_UV:    UpdateUvLevelFast_MP   (u16_Out); break;
+        case FADE_CH_WHITE: UpdateWhiteLevelFast_MP(u16_Out); break;
+        default: break;
+    }
+#else
+    (void)u8_Ch; (void)u16_Perc; (void)u8_Frac10;
+#endif
+}
+
+// SilenceChannel — drive a channel to its floor (BrightnessMin) immediately.
+static void SilenceChannel(uint8_t u8_Ch)
+{
+    FadeChannel_t *p = &g_Fade[u8_Ch];
+    p->i32_PercX10      = 0;
+    p->u8_Dir           = 1u;
+    p->u32_SubStepAccum = 0u; // Clear residue on silence so next activation starts clean
+#ifdef MPU_V2_DEVICE
+    switch (u8_Ch) {
+        case FADE_CH_RED:   SetRedLevel  (0u); break;
+        case FADE_CH_GREEN: SetGreenLevel(0u); break;
+        case FADE_CH_BLUE:  SetBlueLevel (0u); break;
+        case FADE_CH_UV:    SetUvLevel   (0u); break;
+        case FADE_CH_WHITE: SetWhiteLevel(0u); break;
+        default: break;
+    }
+#endif
+}
+
+// StartChannelUp — set direction to UP and record current tick.
+static void StartChannelUp(uint8_t u8_Ch, uint32_t u32_NowMs)
+{
+    g_Fade[u8_Ch].u8_Dir          = 1u;
+    g_Fade[u8_Ch].u32_LastTickMs  = u32_NowMs;
+    g_Fade[u8_Ch].u32_SubStepAccum = 0u; // Clear residue so prior brightness ceiling does not bleed into next phase
+}
+
+// StepChannel — advance one channel by elapsed ms.
+// Returns: 0 = still running, 1 = just reached BrightnessMin, 2 = just reached BrightnessMax.
+static uint8_t StepChannel(uint8_t u8_Ch, uint32_t u32_NowMs)
+{
+    FadeChannel_t *p = &g_Fade[u8_Ch];
+    int32_t  i32_MaxX10   = (int32_t)p->u16_BrightnessMax * 10;
+    int32_t  i32_MinX10   = (int32_t)p->u16_BrightnessMin * 10;
+    uint32_t u32_Elapsed;
+    int32_t  i32_Step;
+    uint8_t  u8_Event = 0u;
+
+    if (u32_NowMs == p->u32_LastTickMs) return 0u;
+    u32_Elapsed       = u32_NowMs - p->u32_LastTickMs;
+    p->u32_LastTickMs = u32_NowMs;
+
+    if (p->u32_FadeDurationMs == 0u) p->u32_FadeDurationMs = ANIM_DEFAULT_DURATION_MS;
+   // If BrightnessMax was reduced below current level, clamp and reverse
+    if (p->i32_PercX10 > i32_MaxX10) {
+        p->i32_PercX10 = i32_MaxX10;
+        p->u8_Dir = 0u;
+    }
+    // Constant-duration step using fractional accumulator to avoid integer truncation.
+    // At low brightness (small MaxX10), naive MaxX10*elapsed/duration truncates to 0.
+    // Accumulate x1000 scaled units; advance i32_PercX10 only when accumulator >= 1000.
+    // Example: BrightnessMax=200, elapsed=2ms, duration=12000ms:
+    //   accum += 2000*2*1000/12000 = 333 per tick
+    //   after 3 ticks: accum=999 → step=0; 4th tick: accum=1332 → step=1, accum=332
+    //   2000 units at this rate takes ~6000ms = same proportion as 10000 in 12000ms.
+    { uint32_t u32_StepX1000 = (i32_MaxX10 > 0 && p->u32_FadeDurationMs > 0u)
+          ? ((uint32_t)i32_MaxX10 * u32_Elapsed * 1000u) / p->u32_FadeDurationMs
+          : 1000u;
+      p->u32_SubStepAccum += u32_StepX1000;
+      i32_Step = (int32_t)(p->u32_SubStepAccum / 1000u);
+      p->u32_SubStepAccum %= 1000u;
+    }
+    if (i32_Step == 0) {
+        OutputChannel(u8_Ch, (uint16_t)(p->i32_PercX10 / 10), (uint8_t)(p->i32_PercX10 % 10));
+        return 0u;
+    }
+
+    if (p->u8_Dir) {
+        p->i32_PercX10 += i32_Step;
+        if (p->i32_PercX10 >= i32_MaxX10) {
+            p->i32_PercX10 = i32_MaxX10;
+            u8_Event = 2u; // reached max
+            /* Debug capture at peak */
+            dbg_fade_brightnessmax = p->u16_BrightnessMax;
+            dbg_fade_percx10_peak  = p->i32_PercX10;
+            dbg_globbrightmax      = u16_GlobalBrightMax;
+        }
+    } else {
+        p->i32_PercX10 -= i32_Step;
+        if (p->i32_PercX10 <= i32_MinX10) {
+            p->i32_PercX10 = i32_MinX10;
+            u8_Event = 1u; // reached min
+        }
+    }
+
+    OutputChannel(u8_Ch,
+                  (uint16_t)(p->i32_PercX10 / 10),
+                  (uint8_t) (p->i32_PercX10 % 10));
+    return u8_Event;
+}
+
+// Sequential channel order: R -> G -> B -> UV -> W -> R -> ...
+static const uint8_t c_SeqOrder[5] = {
+    FADE_CH_RED, FADE_CH_GREEN, FADE_CH_BLUE, FADE_CH_UV, FADE_CH_WHITE
+};
+
+// Animation state (persistent across calls)
+static uint8_t  u8_SeqActiveIdx = 0u; // index into c_SeqOrder
+static uint8_t  u8_SeqPhase     = 0u; // 0 = fading up, 1 = fading down
+static uint8_t  u8_RnbwFading   = FADE_CH_RED;
+static uint8_t  u8_RnbwDecaying = 0xFFu; // 0xFF = none
+static uint8_t  u8_RnbwStarted  = 0u;
+static uint8_t  u8_SeqStarted   = 0u;
+
+void Animation_Init(void)
+{
+    uint8_t i;
+    for (i = 0u; i < 5u; i++) {
+        g_Fade[i].u16_BrightnessMax  = u16_GlobalBrightMax;
+        g_Fade[i].u16_BrightnessMin  = 0u;
+        g_Fade[i].u32_LastTickMs     = 0u;
+        g_Fade[i].i32_PercX10        = 0;
+        g_Fade[i].u8_Dir             = 1u;
+        g_Fade[i].u8_DitherPhase     = 0u;
+        g_Fade[i].u32_SubStepAccum   = 0u;
+    }
+    // Per-channel durations proportional to table size for even visual speed
+    g_Fade[FADE_CH_RED  ].u32_FadeDurationMs = 12000u; // equalised: all channels same duration
+    g_Fade[FADE_CH_GREEN].u32_FadeDurationMs = 12000u; // 2900 entries
+    g_Fade[FADE_CH_BLUE ].u32_FadeDurationMs = 12000u; // 2900 entries
+    g_Fade[FADE_CH_UV   ].u32_FadeDurationMs = 12000u; // equalised
+    g_Fade[FADE_CH_WHITE].u32_FadeDurationMs = 12000u; // 2900 entries
+    //
+    u8_SeqActiveIdx = 0u;
+    u8_SeqPhase     = 0u;
+    u8_RnbwFading   = FADE_CH_RED;
+    u8_RnbwDecaying = 0xFFu;
+    u8_RnbwStarted  = 0u;
+    u8_SeqStarted   = 0u;
+    UpdateStrobeRawIndices(); /* Init strobe raw indices from startup GlobalBrightMax */
+}
+
+void Animation_Update(void)
+{
+    uint32_t u32_Now = u32_ST_captureActual;
+    uint8_t  u8_Event, u8_Next, i;
+
+    // Sync brightness ceiling from manual AM variables (raw index -> 0-1000 perceptual)
+    // This makes the UP/DOWN buttons control animation brightness ceiling.
+   // Apply global brightness ceiling to all channels uniformly.
+    // u16_GlobalBrightMax (0-1000) is the single source of truth — set by
+    // Up/Down in any mode. Do not hardcode 1000 here.
+    {
+        uint8_t ch;
+        for (ch = 0u; ch < 5u; ch++) {
+            g_Fade[ch].u16_BrightnessMax = u16_GlobalBrightMax;
+        }
+    } 
+    // White is physically brighter — cap at 60% of global max to balance
+    if (u8_StateMaschine == SM_MODE_SEQUENTIAL)
+    {
+        if (u8_Mode_Sqnt_Status != MODE_STATUS_RUN) {
+            // On stop, reset sequential state so next RUN starts cleanly
+            u8_SeqStarted = 0u;
+            return;
+        }
+
+        // First entry into RUN: silence all channels, start first channel up
+        if (!u8_SeqStarted) {
+            for (i = 0u; i < 5u; i++) SilenceChannel(i);
+            u8_SeqActiveIdx = 0u;
+            u8_SeqPhase     = 0u;
+            StartChannelUp(c_SeqOrder[0u], u32_Now);
+            u8_SeqStarted = 1u;
+        }
+
+        u8_Event = StepChannel(c_SeqOrder[u8_SeqActiveIdx], u32_Now);
+
+        if (u8_SeqPhase == 0u) {
+            // Fading up — wait for MAX event
+            if (u8_Event == 2u) {
+                // Reached max: start fading down
+                g_Fade[c_SeqOrder[u8_SeqActiveIdx]].u8_Dir = 0u;
+                u8_SeqPhase = 1u;
+            }
+            // Update legacy SM variable (UP state = channel*2)
+            u32_Mode_Sqnt_SM = (uint32_t)(c_SeqOrder[u8_SeqActiveIdx]) * 2u;
+        } else {
+            // Fading down — wait for MIN event (level == 0)
+            if (u8_Event == 1u) {
+                // Reached min: silence and advance to next channel
+                SilenceChannel(c_SeqOrder[u8_SeqActiveIdx]);
+                u8_SeqActiveIdx = (uint8_t)((u8_SeqActiveIdx + 1u) % 5u);
+                u8_SeqPhase = 0u;
+                StartChannelUp(c_SeqOrder[u8_SeqActiveIdx], u32_Now);
+            }
+            // Update legacy SM variable (DOWN state = channel*2+1)
+            u32_Mode_Sqnt_SM = (uint32_t)(c_SeqOrder[u8_SeqActiveIdx]) * 2u + 1u;
+        }
+    }
+    else if (u8_StateMaschine == SM_MODE_RAINBOW)
+    {
+        if (u8_Mode_Rnbw_Status != MODE_STATUS_RUN) {
+            u8_RnbwStarted = 0u;
+            return;
+        }
+
+        // First entry: silence all, start Red up
+        if (!u8_RnbwStarted) {
+            for (i = 0u; i < 5u; i++) SilenceChannel(i);
+            u8_RnbwFading   = FADE_CH_RED;
+            u8_RnbwDecaying = 0xFFu;
+            StartChannelUp(FADE_CH_RED, u32_Now);
+            u8_RnbwStarted = 1u;
+        }
+
+        // Step the channel currently fading up
+        u8_Event = StepChannel(u8_RnbwFading, u32_Now);
+
+        // Also step the decaying channel (if one is active)
+        if (u8_RnbwDecaying != 0xFFu) {
+            StepChannel(u8_RnbwDecaying, u32_Now);
+        }
+
+        // When the rising channel hits its max, start the next channel up
+        // and put the current channel into decay
+        if (u8_Event == 2u) {
+            u8_Next = (uint8_t)((u8_RnbwFading + 1u) % 5u);
+            // Silence any fully-decayed channel (it should be at zero)
+            if (u8_RnbwDecaying != 0xFFu) {
+                SilenceChannel(u8_RnbwDecaying);
+            }
+            // Current fading channel becomes the decaying channel
+            u8_RnbwDecaying = u8_RnbwFading;
+            g_Fade[u8_RnbwDecaying].u8_Dir = 0u; // fade down
+            // Start next channel rising
+            u8_RnbwFading = u8_Next;
+            StartChannelUp(u8_Next, u32_Now);
+        }
+
+        // Update legacy SM variable
+        u32_Mode_Rnbw_SM = (uint32_t)(u8_RnbwFading) * 2u;
+    }
+    else
+    {
+        // Not in animation mode: reset state for clean re-entry
+        u8_SeqStarted  = 0u;
+        u8_RnbwStarted = 0u;
+    }
+}
+// =============================================================================
+// End of Animation State Machine (Stage 3)
+// =============================================================================
 
 
 #ifdef  USE_FULL_ASSERT

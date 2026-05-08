@@ -127,8 +127,7 @@ uint16_t u16_RedRefference_MP[256] ;// Индексы шим таблицы
 // Таблица повторений шага в автоматическом режиме
 //   1 1 1 1  47 47 47 47  96 96 96 96 96 
 //  10. MPU_V2 main.c 
-// ?? const 
-uint8_t         
+const uint8_t         
 u8_RedLightRepeatFactor_MP[ RED_LEVEL_MAX_MP - RED_OFFSET ] = {  // 
 //
 // мертвая зона из первых 20 (RED_OFFSET) элементов задержки не имеет.
@@ -249,8 +248,7 @@ uint16_t u16_GreenRefference_MP[256] ;
 //
 // Таблица повторений шага в автоматическом режиме
 // 1 1 1 1 1 1  49 49 49 49  51 51 51 51 51 
-// ?? const
-uint8_t         
+const uint8_t         
 u8_GreenLightRepeatFactor_MP[ GREEN_LEVEL_MAX_MP - GRN_OFFSET] = {  // GREEN_LEVEL_MAX_MP - 20 = 2900
 //
 // мертвая зона из первых 20 элементов задержки не имеет.
@@ -438,8 +436,7 @@ uint16_t u16_BlueRefference_MP[256] ;
 //
 // Таблица повторений шага в автоматическом режиме
 // 1 1 1 1 1  35 35 35 35  58 58 58 58 58 58 
-// ?? const
-uint8_t         
+const uint8_t         
 u8_BlueLightRepeatFactor_MP[ BLUE_LEVEL_MAX_MP - BLU_OFFSET] = {  // 2720 - 20 = 2700
 //
 // мертвая зона из первых 2 элементов задержки не имеет.
@@ -598,8 +595,7 @@ uint16_t u16_UvRefference_MP[256] ;
 //
 // Таблица повторений шага в автоматическом режиме
 // 1 1 1 1  35 35 35 35  49 49 49 49 49 49 49 
-// ?? const 
-uint8_t         
+const uint8_t         
 u8_UvLightRepeatFactor_MP[ UV_LEVEL_MAX_MP - UV_OFFSET ] = {  // 
 //
 // мертвая зона из первых 20 элементов задержки не имеет.
@@ -754,8 +750,7 @@ uint16_t u16_WhiteRefference_MP[256] ;
 //       
 // Таблица повторений шага в автоматическом режиме
 // 3 3 3 3 3  38 38 38 38 38  42 42 42 42 42 42 
-// ?? const 
-uint8_t         
+const uint8_t         
 u8_WhiteLightRepeatFactor_MP[ WHITE_LEVEL_MAX_MP - WHT_OFFSET] = {  // 
 //
 // мертвая зона из первых 20 элементов задержки не имеет.
@@ -1101,7 +1096,6 @@ void InitRedLightArray_MP_V1(void)
     u16_RedRefference_MP[	131	]	=	553	; // 	8
     u16_RedRefference_MP[	132	]	=	561	; // 	8
     u16_RedRefference_MP[	133	]	=	569	; // 	8
-    u16_RedRefference_MP[	133	]	=	577	; // 	8
     u16_RedRefference_MP[	134	]	=	585	; // 	8
     u16_RedRefference_MP[	135	]	=	593	; // 	8
     u16_RedRefference_MP[	136	]	=	601	; // 	8
@@ -1417,7 +1411,6 @@ void InitGreenLightArray_MP_V1(void)
     u16_GreenRefference_MP[	131	]	=	755	; // 	10
     u16_GreenRefference_MP[	132	]	=	765	; // 	11
     u16_GreenRefference_MP[	133	]	=	776	; // 	11
-    u16_GreenRefference_MP[	133	]	=	787	; // 	11
     u16_GreenRefference_MP[	134	]	=	798	; // 	11
     u16_GreenRefference_MP[	135	]	=	809	; // 	11
     u16_GreenRefference_MP[	136	]	=	820	; // 	11
@@ -1733,7 +1726,6 @@ void InitBlueLightArray_MP_V1(void)
     u16_BlueRefference_MP[	131	]	=	755	; // 	10
     u16_BlueRefference_MP[	132	]	=	765	; // 	11
     u16_BlueRefference_MP[	133	]	=	776	; // 	11
-    u16_BlueRefference_MP[	133	]	=	787	; // 	11
     u16_BlueRefference_MP[	134	]	=	798	; // 	11
     u16_BlueRefference_MP[	135	]	=	809	; // 	11
     u16_BlueRefference_MP[	136	]	=	820	; // 	11
@@ -2048,7 +2040,6 @@ void InitUvLightArray_MP_V1(void)
     u16_UvRefference_MP[	131	]	=	840	; // 	11
     u16_UvRefference_MP[	132	]	=	851	; // 	11
     u16_UvRefference_MP[	133	]	=	862	; // 	11
-    u16_UvRefference_MP[	133	]	=	873	; // 	11
     u16_UvRefference_MP[	134	]	=	884	; // 	12
     u16_UvRefference_MP[	135	]	=	896	; // 	12
     u16_UvRefference_MP[	136	]	=	908	; // 	12
@@ -2364,7 +2355,6 @@ void InitWhiteLightArray_MP_V1(void)
     u16_WhiteRefference_MP[	131	]	=	840	; // 	11
     u16_WhiteRefference_MP[	132	]	=	851	; // 	11
     u16_WhiteRefference_MP[	133	]	=	862	; // 	11
-    u16_WhiteRefference_MP[	133	]	=	873	; // 	11
     u16_WhiteRefference_MP[	134	]	=	884	; // 	12
     u16_WhiteRefference_MP[	135	]	=	896	; // 	12
     u16_WhiteRefference_MP[	136	]	=	908	; // 	12
@@ -3763,20 +3753,22 @@ void Handle_I2C_Master_Transmit(uint8_t u8_WrightDest )
 #endif /* USE_TIMEOUT */
 
   /* Loop until DMA transfer complete event */
+  
+
+{ uint32_t u32_I2C_T0 = uwTick;
   while(!ubMasterTransferComplete)
   {
-#if (USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag()) 
+    if ((uwTick - u32_I2C_T0) > 50U)
     {
-      if(Timeout-- == 0)
-      {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
-      }
+      ubMasterTransferComplete = 0;
+      NVIC_DisableIRQ(I2C3_EV_IRQn);
+      NVIC_DisableIRQ(I2C3_ER_IRQn);
+      LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_5);
+      LL_I2C_GenerateStopCondition(I2C3);
+      return; /* STM8 TX timeout: abort, do not hang */
     }
-#endif /* USE_TIMEOUT */
   }
+}
 
   /* (6) Generate a Stop condition to the Slave device ************************/
   LL_I2C_GenerateStopCondition(I2C3);
@@ -3829,6 +3821,13 @@ void Handle_I2C_Master_TransmitReceive(uint8_t u8_ReadSource)
 /*  pMasterTransmitBuffer    = (uint32_t*)(&read_data[0]);
   ubMasterNbDataToTransmit = (1+2);*/
   //
+
+  /* Skip transaction if I2C3 bus is still BUSY from a previous error */
+  /* Re-enable I2C3 IRQs (may have been masked by a previous timeout cleanup) */
+  NVIC_EnableIRQ(I2C3_EV_IRQn);
+  NVIC_EnableIRQ(I2C3_ER_IRQn);
+  /* Skip transaction if I2C3 bus is still BUSY from a previous error */
+  if (LL_I2C_IsActiveFlag_BUSY(I2C3)) return;
   if ( u8_ReadSource == I2C_READ_KBD )
   {
     aCommandCode_KBD[0] = (char*)(&u8_R_Array[0]);
@@ -3870,22 +3869,22 @@ void Handle_I2C_Master_TransmitReceive(uint8_t u8_ReadSource)
   Timeout = DMA_SEND_TIMEOUT_TC_MS;
 #endif /* USE_TIMEOUT */
 
-  /* Loop until DMA transfer complete event */
-  while(!ubMasterTransferComplete)
-  {
-#if (USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag()) 
+  /* Loop until DMA transfer complete event (50ms timeout guards against STM8 absent/NAK) */
+  { uint32_t u32_I2C_T0 = uwTick;
+    while(!ubMasterTransferComplete)
     {
-      if(Timeout-- == 0)
+      if ((uwTick - u32_I2C_T0) > 50U)
       {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
+        ubMasterTransferComplete = 0;
+        NVIC_DisableIRQ(I2C3_EV_IRQn);  /* mask EV ISR before tearing down DMA */
+        NVIC_DisableIRQ(I2C3_ER_IRQn);
+        LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_5);
+        LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_2);
+        LL_I2C_GenerateStopCondition(I2C3);
+        return; /* STM8 TX timeout: abort, do not hang */       
       }
     }
-#endif /* USE_TIMEOUT */
-  }
-
+  }  
   /* Reset ubMasterTransferComplete flag */
   ubMasterTransferComplete = 0;
 
@@ -3909,30 +3908,32 @@ void Handle_I2C_Master_TransmitReceive(uint8_t u8_ReadSource)
   Timeout = DMA_SEND_TIMEOUT_TC_MS;
 #endif /* USE_TIMEOUT */
 
-  /* Loop until DMA transfer complete event */
-  while(!ubMasterTransferComplete)
-  {
-#if (USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag()) 
+  /* Loop until DMA transfer complete event (50ms timeout guards against STM8 absent/NAK) */
+  { uint32_t u32_I2C_T0 = uwTick;
+    while(!ubMasterTransferComplete)
     {
-      if(Timeout-- == 0)
+      if ((uwTick - u32_I2C_T0) > 50U)
       {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
+        ubMasterTransferComplete = 0;
+        NVIC_DisableIRQ(I2C3_EV_IRQn);  /* mask EV ISR before tearing down DMA */
+        NVIC_DisableIRQ(I2C3_ER_IRQn);
+        LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_5);
+        LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_2);
+        LL_I2C_GenerateStopCondition(I2C3);
+        return; /* STM8 RX timeout: abort, do not hang */
       }
     }
-#endif /* USE_TIMEOUT */
   }
+
   /* (9) Generate a Stop condition to the Slave device ************************/
-  LL_I2C_GenerateStopCondition(I2C2);
+  LL_I2C_GenerateStopCondition(I2C3);
 
   /* (10) Clear pending flags, Data Command Code are checking into Slave process */
   /* Disable Last DMA bit */
-  LL_I2C_DisableLastDMA(I2C2);
+  LL_I2C_DisableLastDMA(I2C3);
 
   /* Disable acknowledge for Master next data reception */
-  LL_I2C_AcknowledgeNextData(I2C2, LL_I2C_NACK);
+  LL_I2C_AcknowledgeNextData(I2C3, LL_I2C_NACK);
 
   /* End of Master Process */
   LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_2);
@@ -3987,15 +3988,14 @@ void Transfer_Error_Callback()
   */
 void Error_Callback(void)
 {
-  /* Disable I2C1_EV_IRQn */
-  NVIC_DisableIRQ(I2C1_EV_IRQn);
-
-  /* Disable I2C1_ER_IRQn */
-  NVIC_DisableIRQ(I2C1_ER_IRQn);
-
-  /* Unexpected event : Set LED2 to Blinking mode to indicate error occurs */
-  //  LED_Blinking(LED_BLINK_ERROR);
+  /* I2C3 error (e.g. STM8 NACK): issue STOP, drain DMA streams, unblock spin-wait.
+   * Previous code incorrectly disabled I2C1 IRQs here — I2C1 is not used. */
+  LL_I2C_GenerateStopCondition(I2C3);
+  LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_5);
+  LL_DMA_DisableStream(DMA1, LL_DMA_STREAM_2);
+  ubMasterTransferComplete = 1;  /* unblock spin-wait so timeout path exits cleanly */
 }
+
 
 
 // ==================== I2C Конец  кода ============================================== //
@@ -4016,7 +4016,6 @@ void Implement_RC6_Command(void)
 }
 
 uint8_t u8_NEC_TxCounter ;
-uint8_t u8_NEC_TxCounter ; 
    
 uint8_t u16_NEC_IR_RX_captureCounter ; 
       //  
@@ -4120,7 +4119,9 @@ void  ProcessIrDA_StateMaschine          ( void                  )
     u8_RxPacketDataLength =    10; // 7
     //          u8_ButtonState[1+1+1+2+2];
     // Handle I2C3 events (Master Transmit then Receive) //
-    Handle_I2C_Master_TransmitReceive(I2C_READ_IRDA); 
+    #ifndef DISABLE_I2C_MASTER
+      Handle_I2C_Master_TransmitReceive(I2C_READ_IRDA);
+    #endif /* DISABLE_I2C_MASTER */ 
     //
     if (u8_PacketCounter != aMasterReceiveBuffer[1])
     {
@@ -4220,19 +4221,62 @@ int main(void)
   //  39. MPU_V2 main.c 
   SystemClock_Config();
   //
+  // --- IWDG Watchdog Init ---
+  // Timeout ~4s: LSI=32kHz, prescaler=/32, reload=999
+  // timeout = (4 * 32 * 999) / 32000 = 3.996s
+  LL_RCC_LSI_Enable();
+  while (LL_RCC_LSI_IsReady() == 0) {}  // wait for LSI (~1ms)
+  IWDG->KR  = 0xCCCC;                   // start IWDG
+  IWDG->KR  = 0x5555;                   // unlock PR and RLR
+  IWDG->PR  = 0x05;                     // prescaler /128
+  IWDG->RLR = 999;                      // reload value
+  while (IWDG->SR & (IWDG_SR_PVU | IWDG_SR_RVU)) {}  // wait for sync
+  IWDG->KR  = 0xAAAA;                   // initial kick
+  // --- End IWDG Init ---
+  //
   // 
   // ==================== I2C_Начало кода ============================================== //
   //
   // LL_mDelay(200); //LL_mDelay(400);
   //
+#if ENABLE_I2C_IRDA
   // Configure DMA1_Stream5 (DMA IP configuration in transfer memory to peripheral (I2C3)  //
   Configure_DMA();
+
+/* I2C3 bus recovery: clock SCL 9 times to release any stuck slave.
+ * Required if STM8 was left mid-byte by a previous reset. */
+LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
+LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_8, LL_GPIO_MODE_OUTPUT);      /* SCL as GPIO */
+LL_GPIO_SetPinOutputType(GPIOA, LL_GPIO_PIN_8, LL_GPIO_OUTPUT_OPENDRAIN);
+LL_GPIO_SetPinPull(GPIOA, LL_GPIO_PIN_8, LL_GPIO_PULL_UP);
+LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_9, LL_GPIO_MODE_OUTPUT);      /* SDA as GPIO */
+LL_GPIO_SetPinOutputType(GPIOC, LL_GPIO_PIN_9, LL_GPIO_OUTPUT_OPENDRAIN);
+LL_GPIO_SetPinPull(GPIOC, LL_GPIO_PIN_9, LL_GPIO_PULL_UP);
+for (int i = 0; i < 9; i++)                                         /* 9 SCL pulses */
+{
+    LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_8);
+    LL_mDelay(1);
+    LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_8);
+    LL_mDelay(1);
+}
+
+/* STOP condition: SCL high, SDA low→high */
+LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_8);   /* SCL high */
+LL_mDelay(1);
+LL_GPIO_ResetOutputPin(GPIOC, LL_GPIO_PIN_9); /* SDA low */
+LL_mDelay(1);
+LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_9);   /* SDA high = STOP */
+LL_mDelay(1);
+/* Pins will be reconfigured to AF4 by Configure_I2C_Master() below */
+
   //
   // Configure I2C1 (I2C IP configuration in Slave mode and related GPIO initialization) //
   // Configure_I2C_Slave();
-
   // Configure I2C3 (I2C IP configuration in Master mode and related GPIO initialization) //
-  Configure_I2C_Master();
+  #ifndef DISABLE_I2C_MASTER
+    Configure_I2C_Master();
+  #endif /* DISABLE_I2C_MASTER */
   //
   // Enable the I2C1 peripheral (Slave) //
   // Activate_I2C_Slave();
@@ -4246,7 +4290,8 @@ int main(void)
   u8_SlaveAddress       = IRDA_ADDRESS;
   //                    //1 +4+6 = 11   
   // u8_ControlLEDs[ 1 +4+6];  // Первый байт, заголовок, данные
-  Handle_I2C_Master_Transmit(I2C_WRIGHT_LED);
+  Handle_I2C_Master_Transmit(I2C_WRIGHT_LED); /* Initial handshake: matches LPU working implementation */
+#endif /* ENABLE_I2C_IRDA */
   //
   // ==================== I2C Конец  кода ============================================== //
   // 
@@ -4332,6 +4377,7 @@ int main(void)
           InitBlueLightArray_MP_V1();
           InitUvLightArray_MP_V1();
           InitWhiteLightArray_MP_V1();  
+          Animation_Init();          // Stage 3: init fade engine
           //
           break;
     //
@@ -4431,10 +4477,12 @@ int main(void)
   /* ++++  */
   //  55. MPU_V2 main.c 
   // ВНИМАНИЕ  - ОСНОВНОЙ ФРАГМЕНТ
-  u8_StateMaschine = SM_MODE_TURN_ON ; //SM_MODE_MANUAL  ;   
+  u8_StateMaschine = SM_MODE_TURN_ON ; //SM_MODE_TURN_ON  ;   
   while (true)
   {
+    IWDG->KR = 0xAAAA;           // kick watchdog
     ProcessMainStateMaschine();
+    Animation_Update();              // Stage 3: uwTick-driven animation
     //
     // ===================================================== //
     // ИК приемник

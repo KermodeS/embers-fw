@@ -1,0 +1,7 @@
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_IRDA.c:255:6:IR_GetCode_V2	12	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_IRDA.c:738:6:ProcessIRCode	16	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_IRDA.c:896:9:u8_GetByteFrom_IR_RX_capture	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_IRDA.c:1305:6:Update_IR_TX_Packet	4	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_IRDA.c:1642:6:Create_IR_Tx_ChangeSpeed_Packet	24	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_IRDA.c:1781:6:ProcessIRDA_Rx	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_IRDA.c:2134:6:IRDA_CARRIER_ChannelInit	16	static

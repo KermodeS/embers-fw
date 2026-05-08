@@ -1,0 +1,13 @@
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:57:10:InitButton_MODE	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:66:10:InitButton_UP	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:74:10:InitButton_DOWN	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:83:10:InitButton_PREV	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:91:10:InitButton_NEXT	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:101:6:InitControlButtons	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:197:6:Implement_KBD	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:430:6:ProcessButton_Mode	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:589:6:ProcessButton_Up	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:750:6:ProcessButton_Down	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:912:6:ProcessButton_Next	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:1073:6:ProcessButton_Prev	8	static
+/home/workstation/embers_fw/LLU_V2_Common/LLU_V2_KBD.c:1233:6:ProcessControlButtons	16	static

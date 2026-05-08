@@ -1,0 +1,2 @@
+/home/workstation/embers_fw/MPU_V2_Basic/Src/system_stm32f4xx.c:151:6:SystemInit	4	static
+/home/workstation/embers_fw/MPU_V2_Basic/Src/system_stm32f4xx.c:219:6:SystemCoreClockUpdate	0	static
