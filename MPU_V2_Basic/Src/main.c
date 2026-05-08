@@ -127,8 +127,7 @@ uint16_t u16_RedRefference_MP[256] ;// Индексы шим таблицы
 // Таблица повторений шага в автоматическом режиме
 //   1 1 1 1  47 47 47 47  96 96 96 96 96 
 //  10. MPU_V2 main.c 
-// ?? const 
-uint8_t         
+const uint8_t         
 u8_RedLightRepeatFactor_MP[ RED_LEVEL_MAX_MP - RED_OFFSET ] = {  // 
 //
 // мертвая зона из первых 20 (RED_OFFSET) элементов задержки не имеет.
@@ -249,8 +248,7 @@ uint16_t u16_GreenRefference_MP[256] ;
 //
 // Таблица повторений шага в автоматическом режиме
 // 1 1 1 1 1 1  49 49 49 49  51 51 51 51 51 
-// ?? const
-uint8_t         
+const uint8_t         
 u8_GreenLightRepeatFactor_MP[ GREEN_LEVEL_MAX_MP - GRN_OFFSET] = {  // GREEN_LEVEL_MAX_MP - 20 = 2900
 //
 // мертвая зона из первых 20 элементов задержки не имеет.
@@ -438,8 +436,7 @@ uint16_t u16_BlueRefference_MP[256] ;
 //
 // Таблица повторений шага в автоматическом режиме
 // 1 1 1 1 1  35 35 35 35  58 58 58 58 58 58 
-// ?? const
-uint8_t         
+const uint8_t         
 u8_BlueLightRepeatFactor_MP[ BLUE_LEVEL_MAX_MP - BLU_OFFSET] = {  // 2720 - 20 = 2700
 //
 // мертвая зона из первых 2 элементов задержки не имеет.
@@ -598,8 +595,7 @@ uint16_t u16_UvRefference_MP[256] ;
 //
 // Таблица повторений шага в автоматическом режиме
 // 1 1 1 1  35 35 35 35  49 49 49 49 49 49 49 
-// ?? const 
-uint8_t         
+const uint8_t         
 u8_UvLightRepeatFactor_MP[ UV_LEVEL_MAX_MP - UV_OFFSET ] = {  // 
 //
 // мертвая зона из первых 20 элементов задержки не имеет.
@@ -754,8 +750,7 @@ uint16_t u16_WhiteRefference_MP[256] ;
 //       
 // Таблица повторений шага в автоматическом режиме
 // 3 3 3 3 3  38 38 38 38 38  42 42 42 42 42 42 
-// ?? const 
-uint8_t         
+const uint8_t         
 u8_WhiteLightRepeatFactor_MP[ WHITE_LEVEL_MAX_MP - WHT_OFFSET] = {  // 
 //
 // мертвая зона из первых 20 элементов задержки не имеет.
