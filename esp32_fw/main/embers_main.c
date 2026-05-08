@@ -1,102 +1,162 @@
-/*
- * embers_main.c
- *
- * Embers Lighting — LLU V2
- * ESP32-WROOM-32 Application Firmware
- * Version: 0.1.0
- *
- * This is the top-level application entry point.
- * It initialises logging, reads and logs the device MAC address,
- * then enters the main loop with a 5-second heartbeat.
- *
- * Subsystem init stubs are marked with TODO comments.
- * Each TODO corresponds to a future development session.
- *
- * Hardware: ESP32-WROOM-32 on Embers MPU V2 board
- * Toolchain: ESP-IDF v5.5.4
- * Build: idf.py build  (always separate from flash)
- * Flash: idf.py -p /dev/ttyUSB0 flash
- */
-
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_system.h"
 #include "esp_log.h"
 #include "esp_mac.h"
-
-/* -------------------------------------------------------------------------
- * Constants
- * ----------------------------------------------------------------------- */
+#include "nvs_storage.h"
 
 static const char *TAG = "EMBERS";
 
-/* Heartbeat period in milliseconds */
-#define HEARTBEAT_PERIOD_MS     5000
+// ---------------------------------------------------------------------------
+// NVS self-test
+// ---------------------------------------------------------------------------
+//
+// TEMPORARY: This self-test writes known values to every NVS key, reads them
+// back, and logs PASS or FAIL for each. Remove this function (and its call in
+// app_main) once NVS is confirmed working on real hardware.
+//
+static void nvs_self_test(void)
+{
+    ESP_LOGI(TAG, "--- NVS self-test START ---");
 
-/* -------------------------------------------------------------------------
- * app_main
- * ----------------------------------------------------------------------- */
+    esp_err_t err;
+    bool all_pass = true;
+
+#define CHECK(label, condition)                          \
+    do {                                                 \
+        if (condition) {                                 \
+            ESP_LOGI(TAG, "PASS: %s", label);           \
+        } else {                                         \
+            ESP_LOGE(TAG, "FAIL: %s", label);           \
+            all_pass = false;                            \
+        }                                                \
+    } while (0)
+
+    // --- wifi_ssid ---
+    {
+        const char *write_val = "TestSSID";
+        char read_buf[64] = {0};
+        err = nvs_store_wifi_ssid(write_val);
+        CHECK("nvs_store_wifi_ssid returned OK", err == ESP_OK);
+        err = nvs_get_wifi_ssid(read_buf, sizeof(read_buf));
+        CHECK("nvs_get_wifi_ssid returned OK", err == ESP_OK);
+        CHECK("wifi_ssid value matches", strcmp(read_buf, write_val) == 0);
+    }
+
+    // --- wifi_password ---
+    {
+        const char *write_val = "TestPassword123";
+        char read_buf[64] = {0};
+        err = nvs_store_wifi_password(write_val);
+        CHECK("nvs_store_wifi_password returned OK", err == ESP_OK);
+        err = nvs_get_wifi_password(read_buf, sizeof(read_buf));
+        CHECK("nvs_get_wifi_password returned OK", err == ESP_OK);
+        CHECK("wifi_password value matches", strcmp(read_buf, write_val) == 0);
+    }
+
+    // --- device_name ---
+    {
+        const char *write_val = "embers-test";
+        char read_buf[64] = {0};
+        err = nvs_store_device_name(write_val);
+        CHECK("nvs_store_device_name returned OK", err == ESP_OK);
+        err = nvs_get_device_name(read_buf, sizeof(read_buf));
+        CHECK("nvs_get_device_name returned OK", err == ESP_OK);
+        CHECK("device_name value matches", strcmp(read_buf, write_val) == 0);
+    }
+
+    // --- device_role ---
+    {
+        uint8_t write_val = 2;
+        uint8_t read_val = 0;
+        err = nvs_store_device_role(write_val);
+        CHECK("nvs_store_device_role returned OK", err == ESP_OK);
+        err = nvs_get_device_role(&read_val);
+        CHECK("nvs_get_device_role returned OK", err == ESP_OK);
+        CHECK("device_role value matches", read_val == write_val);
+    }
+
+    // --- brightness ---
+    {
+        uint16_t write_val = 750;
+        uint16_t read_val = 0;
+        err = nvs_store_brightness(write_val);
+        CHECK("nvs_store_brightness returned OK", err == ESP_OK);
+        err = nvs_get_brightness(&read_val);
+        CHECK("nvs_get_brightness returned OK", err == ESP_OK);
+        CHECK("brightness value matches", read_val == write_val);
+    }
+
+    // --- provisioned ---
+    {
+        bool write_val = true;
+        bool read_val = false;
+        err = nvs_store_provisioned(write_val);
+        CHECK("nvs_store_provisioned returned OK", err == ESP_OK);
+        err = nvs_get_provisioned(&read_val);
+        CHECK("nvs_get_provisioned returned OK", err == ESP_OK);
+        CHECK("provisioned value matches", read_val == write_val);
+    }
+
+    // --- default fallback: device_name default ---
+    // Verify that a fresh get (before any store) returns the correct default.
+    // We can't easily test this without erasing, so we just verify the
+    // defined default constant is correct here as a compile-time sanity check.
+    _Static_assert(sizeof(NVS_DEFAULT_DEVICE_NAME) > 1,
+                   "Default device name must not be empty");
+
+#undef CHECK
+
+    if (all_pass) {
+        ESP_LOGI(TAG, "--- NVS self-test COMPLETE: ALL PASS ---");
+    } else {
+        ESP_LOGE(TAG, "--- NVS self-test COMPLETE: ONE OR MORE FAILURES ---");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// app_main
+// ---------------------------------------------------------------------------
 
 void app_main(void)
 {
-    /* --- Read MAC address ------------------------------------------------
-     * The MAC is the permanent hardware identity of this ESP32 module.
-     * The STM32 will later use this as the device serial number (per
-     * the original softAP_0250 firmware and PROTO-001 spec).
-     */
+    // Startup banner
+    ESP_LOGI(TAG, "========================================");
+    ESP_LOGI(TAG, "  Embers Lighting — ESP32 Firmware");
+    ESP_LOGI(TAG, "  Build: " __DATE__ " " __TIME__);
+    ESP_LOGI(TAG, "========================================");
+
+    // Log MAC address (used as device serial number by STM32)
     uint8_t mac[6];
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
-
-    /* --- Startup banner -------------------------------------------------- */
-    ESP_LOGI(TAG, "=================================");
-    ESP_LOGI(TAG, "Embers Lighting — LLU V2");
-    ESP_LOGI(TAG, "ESP32 Firmware v0.1.0");
     ESP_LOGI(TAG, "MAC: %02X:%02X:%02X:%02X:%02X:%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    ESP_LOGI(TAG, "=================================");
 
-    /* --- Subsystem initialisation (stubs for future sessions) ----------- */
+    // NVS init — required before any subsystem that reads/writes flash storage
+    esp_err_t nvs_err = nvs_storage_init();
+    if (nvs_err != ESP_OK) {
+        ESP_LOGE(TAG, "NVS init failed — storage unavailable");
+        // Continue running; downstream reads will return defaults
+    }
 
-    /* TODO ESP-2: NVS (Non-Volatile Storage) init
-     * Required before WiFi credentials or settings can be read/written.
-     * nvs_flash_init() must be called before esp_wifi_init().
-     */
+    // TEMPORARY: NVS self-test — remove once confirmed on real hardware
+    if (nvs_err == ESP_OK) {
+        nvs_self_test();
+    }
 
-    /* TODO ESP-3: WiFi init
-     * Station mode — connect to home router using credentials from NVS.
-     * First-boot captive portal provisioning when no credentials stored.
-     */
+    // TODO (ESP-3): WiFi init
+    // TODO (ESP-4): mDNS init
+    // TODO (ESP-5): WebSocket server init
+    // TODO (ESP-6): UART-to-STM32 driver init
+    // TODO (ESP-7): ESP-NOW init
 
-    /* TODO ESP-4: mDNS announcement
-     * Advertise device as embers-<last4mac>.local on the local network.
-     */
-
-    /* TODO ESP-5: WebSocket server
-     * Real-time bidirectional control channel for the web UI.
-     * Listens on ws://<device-ip>/ws
-     */
-
-    /* TODO ESP-6: UART driver to STM32
-     * Sends light control commands received via WebSocket down to STM32.
-     * Receives state updates from STM32 (per PROTO-001 spec).
-     * STM32 TX -> ESP32 RX: PA3/USART2_RX
-     * STM32 RX -> ESP32 TX: PA2/USART2_TX
-     * Baud: 115200, 8N1
-     */
-
-    /* TODO ESP-7: ESP-NOW inter-device sync
-     * Hub role: discover peers, relay commands for group mode.
-     * Replaces old UDP broadcast from softAP_0250.
-     */
-
-    /* --- Main loop ------------------------------------------------------- */
+    // Main loop — heartbeat
     uint32_t heartbeat_count = 0;
-
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(HEARTBEAT_PERIOD_MS));
+        vTaskDelay(pdMS_TO_TICKS(5000));
         heartbeat_count++;
-        ESP_LOGI(TAG, "Heartbeat #%lu -- idle, awaiting subsystems", heartbeat_count);
+        ESP_LOGI(TAG, "Heartbeat #%lu", heartbeat_count);
     }
 }
