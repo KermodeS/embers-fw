@@ -3,6 +3,8 @@ idf_component_register(
         "embers_main.c"
         "nvs_storage.c"
         "wifi_sta.c"
+        "captive_portal.c"
+        "dns_hijack.c"
     INCLUDE_DIRS
         "."
     REQUIRES
@@ -10,5 +12,8 @@ idf_component_register(
         esp_wifi
         esp_event
         esp_netif
+        esp_http_server
         lwip
+        freertos
+        esp_timer
 )
