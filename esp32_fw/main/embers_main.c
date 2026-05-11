@@ -6,6 +6,7 @@
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "nvs_storage.h"
+#include "wifi_sta.h"
 
 static const char *TAG = "EMBERS";
 
@@ -25,13 +26,13 @@ static void nvs_self_test(void)
     bool all_pass = true;
 
 #define CHECK(label, condition)                          \
-    do {                                                 \
-        if (condition) {                                 \
-            ESP_LOGI(TAG, "PASS: %s", label);           \
-        } else {                                         \
-            ESP_LOGE(TAG, "FAIL: %s", label);           \
-            all_pass = false;                            \
-        }                                                \
+    do {                                             \
+        if (condition) {                             \
+            ESP_LOGI(TAG, "PASS: %s", label);         \
+        } else {                                     \
+            ESP_LOGE(TAG, "FAIL: %s", label);         \
+            all_pass = false;                        \
+        }                                            \
     } while (0)
 
     // --- wifi_ssid ---
@@ -118,15 +119,15 @@ static void nvs_self_test(void)
 
 // ---------------------------------------------------------------------------
 // app_main
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 
 void app_main(void)
 {
     // Startup banner
-    ESP_LOGI(TAG, "========================================");
-    ESP_LOGI(TAG, "  Embers Lighting — ESP32 Firmware");
+    ESP_LOGI(TAG, "====================================");
+    ESP_LOGI(TAG, "  Embers Lighting - ESP32 Firmware");
     ESP_LOGI(TAG, "  Build: " __DATE__ " " __TIME__);
-    ESP_LOGI(TAG, "========================================");
+    ESP_LOGI(TAG, "====================================");
 
     // Log MAC address (used as device serial number by STM32)
     uint8_t mac[6];
@@ -134,25 +135,32 @@ void app_main(void)
     ESP_LOGI(TAG, "MAC: %02X:%02X:%02X:%02X:%02X:%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
-    // NVS init — required before any subsystem that reads/writes flash storage
+    // NVS init - required before any subsystem that reads/writes flash storage
     esp_err_t nvs_err = nvs_storage_init();
     if (nvs_err != ESP_OK) {
-        ESP_LOGE(TAG, "NVS init failed — storage unavailable");
+        ESP_LOGE(TAG, "NVS init failed - storage unavailable");
         // Continue running; downstream reads will return defaults
     }
 
-    // TEMPORARY: NVS self-test — remove once confirmed on real hardware
+    // TEMPORARY: NVS self-test - remove once confirmed on real hardware
     if (nvs_err == ESP_OK) {
         nvs_self_test();
     }
 
-    // TODO (ESP-3): WiFi init
+    // ESP-3: WiFi station-mode bring-up. Non-fatal on failure - the heartbeat
+    // loop must continue running regardless (per ESP-3 strict spec).
+    esp_err_t wifi_err = wifi_sta_init();
+    if (wifi_err != ESP_OK) {
+        ESP_LOGE(TAG, "wifi_sta_init failed: %s - continuing without WiFi",
+                 esp_err_to_name(wifi_err));
+    }
+
     // TODO (ESP-4): mDNS init
     // TODO (ESP-5): WebSocket server init
     // TODO (ESP-6): UART-to-STM32 driver init
     // TODO (ESP-7): ESP-NOW init
 
-    // Main loop — heartbeat
+    // Main loop - heartbeat
     uint32_t heartbeat_count = 0;
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(5000));
