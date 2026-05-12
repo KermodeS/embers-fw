@@ -1,5 +1,6 @@
 #include "wifi_sta.h"
 #include "nvs_storage.h"
+#include "mdns_hub.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -14,31 +15,27 @@
 #include "esp_netif.h"
 #include "esp_err.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 
 #include "lwip/ip4_addr.h"
 
 static const char *TAG = "wifi_sta";
 
-// Slow-retry interval after fast-retry budget is exhausted.
 #define WIFI_STA_SLOW_RETRY_MS   30000
+#define WIFI_STA_TIMEOUT_US      (300LL * 1000000LL)
 
-// Event-group bits:
-//   CONNECTED_BIT set only after IP_EVENT_STA_GOT_IP.
-//   SLOW_RETRY_BIT signals the slow-retry task to wake and call esp_wifi_connect.
 #define WIFI_CONNECTED_BIT  BIT0
 #define WIFI_SLOW_RETRY_BIT BIT1
 
-static EventGroupHandle_t s_event_group = NULL;
-static int                 s_retry_count = 0;
-static esp_netif_t        *s_sta_netif = NULL;
+static EventGroupHandle_t s_event_group      = NULL;
+static int                 s_retry_count     = 0;
+static esp_netif_t        *s_sta_netif       = NULL;
 static TaskHandle_t        s_slow_retry_task = NULL;
 
-// Cached SSID for logging (reported in WIFI_CONNECTING / WIFI_CONNECTED).
-static char s_ssid_in_use[33] = {0};
+static int64_t s_disconnect_start_us = 0;
+static bool    s_wifi_idle           = false;
 
-// ---------------------------------------------------------------------------
-// Credential loading
-// ---------------------------------------------------------------------------
+static char s_ssid_in_use[33] = {0};
 
 static void load_credentials(char *ssid_out, size_t ssid_len,
                              char *pass_out, size_t pass_len)
@@ -55,42 +52,39 @@ static bool credentials_empty(const char *ssid, const char *pass)
             pass == NULL || pass[0] == '\0');
 }
 
-// ---------------------------------------------------------------------------
-// Slow-retry task
-// ---------------------------------------------------------------------------
-//
-// After WIFI_STA_MAX_RETRY fast disconnects, this task is signalled to retry
-// once every WIFI_STA_SLOW_RETRY_MS forever. On each attempt it resets the
-// fast-retry counter, so a successful connection restores the fast-retry
-// budget for the next disconnect.
-//
-
 static void slow_retry_task(void *arg)
 {
     (void)arg;
     for (;;) {
-        // Wait for the fast-retry budget to be exhausted.
         xEventGroupWaitBits(s_event_group, WIFI_SLOW_RETRY_BIT,
                             pdFALSE, pdFALSE, portMAX_DELAY);
 
-        // Keep trying until either connected (bit cleared elsewhere) or the
-        // event handler clears the slow-retry bit after association.
         while (xEventGroupGetBits(s_event_group) & WIFI_SLOW_RETRY_BIT) {
             vTaskDelay(pdMS_TO_TICKS(WIFI_STA_SLOW_RETRY_MS));
+
             if ((xEventGroupGetBits(s_event_group) & WIFI_SLOW_RETRY_BIT) == 0) {
-                break; // reconnected during the 30 s sleep
+                break;
             }
+
+            int64_t now_us     = esp_timer_get_time();
+            int64_t elapsed_us = now_us - s_disconnect_start_us;
+
+            if (elapsed_us >= WIFI_STA_TIMEOUT_US) {
+                int elapsed_s = (int)(elapsed_us / 1000000LL);
+                ESP_LOGE(TAG, "WIFI_TIMEOUT elapsed=%ds — entering idle", elapsed_s);
+                esp_wifi_stop();
+                s_wifi_idle = true;
+                xEventGroupClearBits(s_event_group, WIFI_SLOW_RETRY_BIT);
+                break;
+            }
+
             ESP_LOGI(TAG, "WIFI_SLOW_RETRY ssid=%s (interval=%u ms)",
                      s_ssid_in_use, (unsigned)WIFI_STA_SLOW_RETRY_MS);
-            s_retry_count = 0;  // give fast-retry budget another chance
+            s_retry_count = 0;
             esp_wifi_connect();
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Event handler
-// ---------------------------------------------------------------------------
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
@@ -111,7 +105,6 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                  e->bssid[3], e->bssid[4], e->bssid[5],
                  (unsigned)e->channel);
         s_retry_count = 0;
-        // Association succeeded; stop the slow-retry pump if it was running.
         if (s_event_group) {
             xEventGroupClearBits(s_event_group, WIFI_SLOW_RETRY_BIT);
         }
@@ -120,11 +113,18 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         wifi_event_sta_disconnected_t *e = (wifi_event_sta_disconnected_t *)event_data;
         ESP_LOGW(TAG, "WIFI_DISCONNECTED reason=%u", (unsigned)e->reason);
 
+        if (s_wifi_idle) {
+            return;
+        }
+
         if (s_event_group) {
             xEventGroupClearBits(s_event_group, WIFI_CONNECTED_BIT);
         }
 
         if (s_retry_count < WIFI_STA_MAX_RETRY) {
+            if (s_retry_count == 0 && s_disconnect_start_us == 0) {
+                s_disconnect_start_us = esp_timer_get_time();
+            }
             s_retry_count++;
             ESP_LOGI(TAG, "WIFI_CONNECTING ssid=%s (retry %d/%d)",
                      s_ssid_in_use, s_retry_count, WIFI_STA_MAX_RETRY);
@@ -143,17 +143,16 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                  IP2STR(&e->ip_info.ip),
                  IP2STR(&e->ip_info.netmask),
                  IP2STR(&e->ip_info.gw));
-        s_retry_count = 0;
+        s_retry_count         = 0;
+        s_disconnect_start_us = 0;
+        s_wifi_idle           = false;
         if (s_event_group) {
             xEventGroupSetBits(s_event_group, WIFI_CONNECTED_BIT);
             xEventGroupClearBits(s_event_group, WIFI_SLOW_RETRY_BIT);
         }
+        mdns_hub_start();
     }
 }
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 esp_err_t wifi_sta_init(void)
 {
@@ -162,9 +161,6 @@ esp_err_t wifi_sta_init(void)
         return ESP_OK;
     }
 
-    // Load credentials from NVS. If empty (should not happen on a
-    // provisioned device, but guards against NVS corruption), flip
-    // provisioned=0 and restart into the captive portal.
     char ssid[33] = {0};
     char pass[65] = {0};
     load_credentials(ssid, sizeof(ssid), pass, sizeof(pass));
@@ -173,7 +169,7 @@ esp_err_t wifi_sta_init(void)
         ESP_LOGE(TAG, "WIFI_NVS_MISSING — entering provisioning");
         nvs_store_provisioned(0);
         esp_restart();
-        return ESP_FAIL; // unreachable; silences compiler warning
+        return ESP_FAIL;
     }
 
     strncpy(s_ssid_in_use, ssid, sizeof(s_ssid_in_use) - 1);
@@ -235,8 +231,6 @@ esp_err_t wifi_sta_init(void)
         return err;
     }
 
-    // Create the slow-retry task BEFORE esp_wifi_start() so it's ready to
-    // receive signals the first time the fast-retry budget is exhausted.
     BaseType_t task_ok = xTaskCreate(
         slow_retry_task, "wifi_slow_retry", 3072, NULL, 4, &s_slow_retry_task);
     if (task_ok != pdPASS) {
@@ -258,4 +252,9 @@ bool wifi_sta_is_connected(void)
     if (s_event_group == NULL) return false;
     EventBits_t bits = xEventGroupGetBits(s_event_group);
     return (bits & WIFI_CONNECTED_BIT) != 0;
+}
+
+bool wifi_sta_is_idle(void)
+{
+    return s_wifi_idle;
 }

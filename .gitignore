@@ -38,3 +38,4 @@ softAP_0250/.settings/
 *~
 Thumbs.db
 esp32_fw/build/
+esp32_fw/managed_components/

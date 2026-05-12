@@ -5,6 +5,7 @@ idf_component_register(
         "wifi_sta.c"
         "captive_portal.c"
         "dns_hijack.c"
+        "mdns_hub.c"
     INCLUDE_DIRS
         "."
     REQUIRES
@@ -16,4 +17,5 @@ idf_component_register(
         lwip
         freertos
         esp_timer
+        espressif__mdns
 )
