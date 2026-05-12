@@ -8,37 +8,29 @@
  * @brief ESP32 WiFi Station-mode bring-up for Embers Lighting.
  *
  * Reads SSID/password from NVS (namespace "embers", keys "wifi_ssid" /
- * "wifi_pass" as defined in nvs_storage.h). When the stored value is empty
- * or matches a known ESP-2 self-test placeholder, falls back to the
- * compiled-in WIFI_STA_FALLBACK_SSID / WIFI_STA_FALLBACK_PASS below.
+ * "wifi_pass" as defined in nvs_storage.h).
+ *
+ * If NVS credentials are empty when wifi_sta_init() is called (which should
+ * not happen on a provisioned device but is theoretically reachable on NVS
+ * corruption), the function logs WIFI_NVS_MISSING, flips provisioned=0, and
+ * restarts into the captive portal.
  *
  * On disconnect, retries esp_wifi_connect() up to WIFI_STA_MAX_RETRY times.
- * After the retry budget is exhausted, logs "WIFI_GIVEUP" and stops retrying;
- * the application loop (heartbeat) keeps running.
+ * After the retry budget is exhausted, logs "WIFI_GIVEUP" and enters
+ * slow-retry mode (one attempt every WIFI_STA_SLOW_RETRY_MS forever).
  *
- * Provisioning (captive portal) is intentionally NOT handled here -- that is
- * ESP-4. This module is pure station mode + DHCP.
+ * Provisioning (captive portal) is handled in captive_portal.c — this
+ * module is pure station mode + DHCP.
  */
 
 // ---------------------------------------------------------------------------
-// Fallback credentials
-// --------------------------------------------------------------------------
-// Used only when the NVS-stored credentials are empty or hold the ESP-2
-// self-test placeholders. Replaced by real provisioning in ESP-4.
-//
-// NOTE: the target hotspot must be 2.4 GHz -- the ESP32-WROOM-32 does not
-// support 5 GHz.
-#define WIFI_STA_FALLBACK_SSID   "Pixel_7654"
-#define WIFI_STA_FALLBACK_PASS   "hna2eunj68recnt"
-
-// ---------------------------------------------------------------------------
 // Tuning
-// --------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 #define WIFI_STA_MAX_RETRY       5
 
-// --------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Public API
-// --------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 /**
  * @brief Initialise and start the WiFi station-mode subsystem.
@@ -56,6 +48,7 @@
  *     WIFI_DISCONNECTED reason=<n>
  *     GOT_IP addr=<a.b.c.d> mask=<a.b.c.d> gw=<a.b.c.d>
  *     WIFI_GIVEUP            (only after WIFI_STA_MAX_RETRY failures)
+ *     WIFI_NVS_MISSING       (NVS empty on station-init; restarts into portal)
  *
  * @return ESP_OK on success, or an esp_err_t from the underlying esp_wifi/
  *         esp_netif/esp_event initialisation chain.

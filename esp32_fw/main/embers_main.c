@@ -12,115 +12,6 @@
 static const char *TAG = "EMBERS";
 
 // ---------------------------------------------------------------------------
-// NVS self-test
-// ---------------------------------------------------------------------------
-//
-// TEMPORARY: Writes known values to every NVS key, reads them back, logs
-// PASS/FAIL. Remove once NVS is confirmed on hardware.
-//
-// NOTE (ESP-4): The wifi_ssid and wifi_pass tests save and restore the
-// pre-existing NVS values so the provisioning credentials written by
-// captive_portal.c /save are not clobbered on reboot.
-// The provisioned flag is NOT written by the self-test.
-//
-static void nvs_self_test(void)
-{
-    ESP_LOGI(TAG, "--- NVS self-test START ---");
-
-    esp_err_t err;
-    bool all_pass = true;
-
-#define CHECK(label, condition)                     \
-    do {                                            \
-        if (condition) {                            \
-            ESP_LOGI(TAG, "PASS: %s", label);       \
-        } else {                                    \
-            ESP_LOGE(TAG, "FAIL: %s", label);       \
-            all_pass = false;                       \
-        }                                           \
-    } while (0)
-
-    // --- wifi_ssid (save/restore so provisioned credentials survive) ---
-    {
-        char saved_ssid[64] = {0};
-        nvs_get_wifi_ssid(saved_ssid, sizeof(saved_ssid));  /* read current */
-
-        const char *write_val = "TestSSID";
-        char read_buf[64] = {0};
-        err = nvs_store_wifi_ssid(write_val);
-        CHECK("nvs_store_wifi_ssid returned OK", err == ESP_OK);
-        err = nvs_get_wifi_ssid(read_buf, sizeof(read_buf));
-        CHECK("nvs_get_wifi_ssid returned OK", err == ESP_OK);
-        CHECK("wifi_ssid value matches", strcmp(read_buf, write_val) == 0);
-
-        /* Restore whatever was there before the test. */
-        nvs_store_wifi_ssid(saved_ssid);
-    }
-
-    // --- wifi_password (save/restore) ---
-    {
-        char saved_pass[128] = {0};
-        nvs_get_wifi_password(saved_pass, sizeof(saved_pass));
-
-        const char *write_val = "TestPassword123";
-        char read_buf[64] = {0};
-        err = nvs_store_wifi_password(write_val);
-        CHECK("nvs_store_wifi_password returned OK", err == ESP_OK);
-        err = nvs_get_wifi_password(read_buf, sizeof(read_buf));
-        CHECK("nvs_get_wifi_password returned OK", err == ESP_OK);
-        CHECK("wifi_password value matches", strcmp(read_buf, write_val) == 0);
-
-        nvs_store_wifi_password(saved_pass);
-    }
-
-    // --- device_name ---
-    {
-        const char *write_val = "embers-test";
-        char read_buf[64] = {0};
-        err = nvs_store_device_name(write_val);
-        CHECK("nvs_store_device_name returned OK", err == ESP_OK);
-        err = nvs_get_device_name(read_buf, sizeof(read_buf));
-        CHECK("nvs_get_device_name returned OK", err == ESP_OK);
-        CHECK("device_name value matches", strcmp(read_buf, write_val) == 0);
-    }
-
-    // --- device_role ---
-    {
-        uint8_t write_val = 2;
-        uint8_t read_val = 0;
-        err = nvs_store_device_role(write_val);
-        CHECK("nvs_store_device_role returned OK", err == ESP_OK);
-        err = nvs_get_device_role(&read_val);
-        CHECK("nvs_get_device_role returned OK", err == ESP_OK);
-        CHECK("device_role value matches", read_val == write_val);
-    }
-
-    // --- brightness ---
-    {
-        uint16_t write_val = 750;
-        uint16_t read_val = 0;
-        err = nvs_store_brightness(write_val);
-        CHECK("nvs_store_brightness returned OK", err == ESP_OK);
-        err = nvs_get_brightness(&read_val);
-        CHECK("nvs_get_brightness returned OK", err == ESP_OK);
-        CHECK("brightness value matches", read_val == write_val);
-    }
-
-    // --- provisioned: NOT written by self-test (managed by captive_portal.c) ---
-
-    _Static_assert(sizeof(NVS_DEFAULT_DEVICE_NAME) > 1,
-                   "Default device name must not be empty");
-
-#undef CHECK
-
-    if (all_pass) {
-        ESP_LOGI(TAG, "--- NVS self-test COMPLETE: ALL PASS ---");
-    } else {
-        ESP_LOGE(TAG, "--- NVS self-test COMPLETE: ONE OR MORE FAILURES ---");
-    }
-}
-
-// ---------------------------------------------------------------------------
 // app_main
 // ---------------------------------------------------------------------------
 
@@ -142,11 +33,6 @@ void app_main(void)
     esp_err_t nvs_err = nvs_storage_init();
     if (nvs_err != ESP_OK) {
         ESP_LOGE(TAG, "NVS init failed - storage unavailable");
-    }
-
-    // TEMPORARY: NVS self-test (wifi keys save/restored; provisioned not touched)
-    if (nvs_err == ESP_OK) {
-        nvs_self_test();
     }
 
     // Diagnostic: log NVS credential state before provisioning branch

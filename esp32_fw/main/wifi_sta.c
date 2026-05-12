@@ -13,16 +13,11 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_err.h"
+#include "esp_system.h"
 
 #include "lwip/ip4_addr.h"
 
 static const char *TAG = "wifi_sta";
-
-// Placeholder values written by the ESP-2 NVS self-test in embers_main.c.
-// If the NVS-stored credential matches either of these, we treat it as empty
-// and fall back to the compiled-in values in wifi_sta.h.
-static const char *SELFTEST_SSID = "TestSSID";
-static const char *SELFTEST_PASS = "TestPassword123";
 
 // Slow-retry interval after fast-retry budget is exhausted.
 #define WIFI_STA_SLOW_RETRY_MS   30000
@@ -43,55 +38,26 @@ static char s_ssid_in_use[33] = {0};
 
 // ---------------------------------------------------------------------------
 // Credential loading
-// --------------------------------------------------------------------------
-
-static bool is_placeholder_ssid(const char *value)
-{
-    if (value == NULL || value[0] == '\0') return true;
-    if (strcmp(value, SELFTEST_SSID) == 0) return true;
-    return false;
-}
-
-static bool is_placeholder_pass(const char *value)
-{
-    if (value == NULL || value[0] == '\0') return true;
-    if (strcmp(value, SELFTEST_PASS) == 0) return true;
-    return false;
-}
+// ---------------------------------------------------------------------------
 
 static void load_credentials(char *ssid_out, size_t ssid_len,
                              char *pass_out, size_t pass_len)
 {
-    char nvs_ssid[33] = {0};
-    char nvs_pass[65] = {0};
-
-    esp_err_t err1 = nvs_get_wifi_ssid(nvs_ssid, sizeof(nvs_ssid));
-    esp_err_t err2 = nvs_get_wifi_password(nvs_pass, sizeof(nvs_pass));
-
-    bool use_fallback = false;
-    if (err1 != ESP_OK || err2 != ESP_OK) {
-        ESP_LOGW(TAG, "NVS read error (ssid=%s pass=%s) - using fallback",
-                 esp_err_to_name(err1), esp_err_to_name(err2));
-        use_fallback = true;
-    } else if (is_placeholder_ssid(nvs_ssid) || is_placeholder_pass(nvs_pass)) {
-        ESP_LOGW(TAG, "NVS credentials empty or placeholder - using fallback");
-        use_fallback = true;
-    }
-
-    if (use_fallback) {
-        strncpy(ssid_out, WIFI_STA_FALLBACK_SSID, ssid_len - 1);
-        strncpy(pass_out, WIFI_STA_FALLBACK_PASS, pass_len - 1);
-    } else {
-        strncpy(ssid_out, nvs_ssid, ssid_len - 1);
-        strncpy(pass_out, nvs_pass, pass_len - 1);
-    }
+    nvs_get_wifi_ssid(ssid_out, ssid_len);
+    nvs_get_wifi_password(pass_out, pass_len);
     ssid_out[ssid_len - 1] = '\0';
     pass_out[pass_len - 1] = '\0';
 }
 
-// --------------------------------------------------------------------------
+static bool credentials_empty(const char *ssid, const char *pass)
+{
+    return (ssid == NULL || ssid[0] == '\0' ||
+            pass == NULL || pass[0] == '\0');
+}
+
+// ---------------------------------------------------------------------------
 // Slow-retry task
-// --------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 //
 // After WIFI_STA_MAX_RETRY fast disconnects, this task is signalled to retry
 // once every WIFI_STA_SLOW_RETRY_MS forever. On each attempt it resets the
@@ -122,9 +88,9 @@ static void slow_retry_task(void *arg)
     }
 }
 
-// --------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Event handler
-// --------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
@@ -196,6 +162,22 @@ esp_err_t wifi_sta_init(void)
         return ESP_OK;
     }
 
+    // Load credentials from NVS. If empty (should not happen on a
+    // provisioned device, but guards against NVS corruption), flip
+    // provisioned=0 and restart into the captive portal.
+    char ssid[33] = {0};
+    char pass[65] = {0};
+    load_credentials(ssid, sizeof(ssid), pass, sizeof(pass));
+
+    if (credentials_empty(ssid, pass)) {
+        ESP_LOGE(TAG, "WIFI_NVS_MISSING — entering provisioning");
+        nvs_store_provisioned(0);
+        esp_restart();
+        return ESP_FAIL; // unreachable; silences compiler warning
+    }
+
+    strncpy(s_ssid_in_use, ssid, sizeof(s_ssid_in_use) - 1);
+
     s_event_group = xEventGroupCreate();
     if (s_event_group == NULL) {
         ESP_LOGE(TAG, "xEventGroupCreate failed");
@@ -235,17 +217,12 @@ esp_err_t wifi_sta_init(void)
         IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL);
     if (err != ESP_OK) return err;
 
-    char ssid[33] = {0};
-    char pass[65] = {0};
-    load_credentials(ssid, sizeof(ssid), pass, sizeof(pass));
-    strncpy(s_ssid_in_use, ssid, sizeof(s_ssid_in_use) - 1);
-
     wifi_config_t wifi_cfg = {0};
     strncpy((char *)wifi_cfg.sta.ssid, ssid,
             sizeof(wifi_cfg.sta.ssid) - 1);
     strncpy((char *)wifi_cfg.sta.password, pass,
             sizeof(wifi_cfg.sta.password) - 1);
-    wifi_cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    wifi_cfg.sta.threshold.authmode = WIFI_AUTH_WPA_PSK;
 
     err = esp_wifi_set_mode(WIFI_MODE_STA);
     if (err != ESP_OK) {
