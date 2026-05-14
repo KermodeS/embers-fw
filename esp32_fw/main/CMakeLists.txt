@@ -6,6 +6,7 @@ idf_component_register(
         "captive_portal.c"
         "dns_hijack.c"
         "mdns_hub.c"
+        "uart_bridge.c"
     INCLUDE_DIRS
         "."
     REQUIRES
@@ -18,4 +19,5 @@ idf_component_register(
         freertos
         esp_timer
         espressif__mdns
+        driver
 )

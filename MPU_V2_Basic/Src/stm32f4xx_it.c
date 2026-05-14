@@ -40,6 +40,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "stm32f4xx_it.h"
+#include "uart_rx.h"
 #include "stdbool.h"   
 
 #include "LLU_V2_LightControl.h"
@@ -905,3 +906,8 @@ void DMA1_Stream2_IRQHandler(void)
 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+
+/* USART2_IRQHandler not used: bytes are read by WiFi_ProcessRx()
+ * called from TIM1_CC_IRQHandler. uart_rx_isr_byte() is called
+ * from Process_WiFi_IncomingString() in LLU_V2_ESP32.c instead. */
+

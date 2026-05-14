@@ -41,6 +41,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "LLU_V2_ESP32.h"
+#include "uart_rx.h"
 //#include "LLU_V2_IRDA.h"
 #include "LLU_V2_LightControl.h"
 
@@ -519,6 +520,17 @@ extern  uint32_t u32_ActualNetRole ;
 //
 void Process_WiFi_IncomingString()
 {
+  // PROTO-001 dispatch: if line starts with 'E', hand to uart_rx parser
+  // and skip the legacy string parser entirely.
+  if (u8_WiFi_RxArray_A_Counter > 0 && u8_WiFi_RxArray_A [0] == 'E')
+  {
+    uint8_t k;
+    for (k = 0; k < u8_WiFi_RxArray_A_Counter; k++)
+      uart_rx_isr_byte(u8_WiFi_RxArray_A[k]);
+    uart_rx_isr_byte(0x0A); // synthetic newline to flush the line
+    u8_WiFi_RxArray_A_Counter = 0;
+    return;
+  }
   //
   // I KNOW THE EXISTENCE OF FUNCTIONS  sscanf, strcmp and so on
   // 

@@ -1,6 +1,7 @@
 #include "wifi_sta.h"
 #include "nvs_storage.h"
 #include "mdns_hub.h"
+#include "uart_bridge.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -151,6 +152,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             xEventGroupClearBits(s_event_group, WIFI_SLOW_RETRY_BIT);
         }
         mdns_hub_start();
+        uart_bridge_start();
     }
 }
 

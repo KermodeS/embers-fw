@@ -47,6 +47,7 @@ SRC_ROOT    := $(CURDIR)
 C_SOURCES := $(SRC_ROOT)/Src/main.c \
   $(SRC_ROOT)/Src/stm32f4xx_it.c \
   $(SRC_ROOT)/Src/system_stm32f4xx.c \
+  $(SRC_ROOT)/Src/uart_rx.c \
   $(wildcard $(HOME)/embers_fw/LLU_V2_Common/*.c) \
   $(HOME)/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_utils.c \
   $(HOME)/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_rcc.c \

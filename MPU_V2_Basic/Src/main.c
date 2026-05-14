@@ -38,6 +38,7 @@
 //
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "uart_rx.h"
 
 #include "LLU_V2_IRDA.h"
 #include "LLU_V2_ESP32.h"
@@ -4407,6 +4408,7 @@ LL_mDelay(1);
   // IRDA_TX  IRDA_CAR_Init(); // PA9 для IRDA carrier
   //
   WiFi_USART_Init();
+  uart_rx_init();
   LL_mDelay(300);
   //
   WiFi_Power_Init();
@@ -4481,6 +4483,7 @@ LL_mDelay(1);
   while (true)
   {
     IWDG->KR = 0xAAAA;           // kick watchdog
+    uart_rx_poll();
     ProcessMainStateMaschine();
     Animation_Update();              // Stage 3: uwTick-driven animation
     //
