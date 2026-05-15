@@ -38,6 +38,8 @@ extern void SetRedLevel(uint16_t u16_LightIndex);
 extern void SetGreenLevel(uint16_t u16_LightIndex);
 extern void SetBlueLevel(uint16_t u16_LightIndex);
 extern void SetUvLevel(uint16_t u16_LightIndex);
+extern void SetWhiteLevel(uint16_t u16_LightIndex);
+extern bool b_WhiteLightLevelUpdated;
 extern uint16_t u16_GlobalBrightMax;
 extern void UpdateStrobeRawIndices(void);
 extern uint8_t u8_StateMaschine;
@@ -227,10 +229,13 @@ static void dispatch(const char *line)
         return;
     }
 
-    /* ── EWHT -- V2 hardware disabled, accept silently ── */
+    /* ── EWHT ── */
     if (strcmp(cmd, "WHT") == 0) {
         if (val > 1000) { uart2_send_line("SERR:2"); return; }
-        uart2_send_line("DBG EWHT ignored - V2 WHT hardware-disabled");
+        b_WhiteLightLevelUpdated = true;
+        SetWhiteLevel((uint16_t)val);
+        snprintf(dbg, sizeof(dbg), "DBG cmd=EWHT val=%lu ok", val);
+        uart2_send_line(dbg);
         return;
     }
 
